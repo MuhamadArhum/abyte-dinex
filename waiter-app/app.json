@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Abyte ERP Waiter",
+    "slug": "abyte-waiter",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "scheme": "abyte-waiter",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#065F46"
+    },
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#065F46"
+      },
+      "package": "com.abyte.waiter"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-asset",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "064bc4cb-a96c-4420-8855-ae63df4f452c"
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+node_modules/
+.env
+.env.*
+!.env.example
+*.ps1
+
+# Main App
+main-app/backend/node_modules/
+main-app/backend/logs/
+main-app/backend/backups/
+main-app/frontend/node_modules/
+main-app/frontend/dist/
+main-app/frontend/tsconfig.tsbuildinfo
+
+# Admin Panel
+admin-panel/backend/node_modules/
+admin-panel/backend/logs/
+admin-panel/frontend/node_modules/
+admin-panel/frontend/dist/
+api-key.txt
+
+# Electron Apps — built distributables
+server-app/dist/
+client-app/dist/
+
+# Build byproducts
+main-app/backend/$lib/
+
+# Seed / dev-only scripts
+main-app/backend/seed.js
+
+# Claude Code local settings
+.claude/settings.local.json

@@ -1,0 +1,23 @@
+{
+  "name": "abyte-printer-agent",
+  "version": "3.0.0",
+  "description": "Local printer bridge for Abyte ERP",
+  "main": "agent.js",
+  "scripts": {
+    "start": "node agent.js",
+    "build-exe": "pkg agent.js --target node18-win-x64 --output dist/ABytePrinterAgent.exe --compress GZip"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  },
+  "pkg": {
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "dist"
+  }
+}
