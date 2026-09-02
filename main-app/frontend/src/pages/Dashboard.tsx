@@ -3,7 +3,7 @@ import { useSettings } from '../context/SettingsContext';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   DollarSign, ShoppingBag, ShoppingCart, AlertTriangle, TrendingUp,
   TrendingDown, Plus, Package, CreditCard, ArrowRight,
@@ -147,22 +147,28 @@ const Dashboard = () => {
       setLowStockItems((lowStockRes.data.data || []).slice(0, 6));
       const att = attendanceRes.data.summary || {};
       setAttendance({ total: att.total || 0, present: att.present || 0, absent: att.absent || 0, unmarked: att.unmarked || 0, half_day: att.half_day || 0, leave: att.leave || 0 });
-      setChartData((d.chart || []).map((row: any) => ({
-        name: chartPeriod === 'year'
+      const chartMap = new Map<string, ChartDataPoint>();
+      (d.chart || []).forEach((row: any) => {
+        const name = chartPeriod === 'year'
           ? new Date(row.date).toLocaleDateString('en-US', { month: 'short' })
-          : new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        sales: parseFloat(row.revenue || 0),
-        orders: parseInt(row.orders || 0),
-        date: row.date
-      })));
+          : new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const prev = chartMap.get(name);
+        if (prev) {
+          prev.sales  += parseFloat(row.revenue || 0);
+          prev.orders += parseInt(row.orders   || 0);
+        } else {
+          chartMap.set(name, { name, sales: parseFloat(row.revenue || 0), orders: parseInt(row.orders || 0), date: row.date });
+        }
+      });
+      setChartData(Array.from(chartMap.values()));
       const recentSales = recentOrdersRes.data.data || recentOrdersRes.data.sales || [];
       setRecentOrders(recentSales.slice(0, 5).map((s: any) => ({
         sale_id: s.sale_id, total: s.total_amount || s.net_amount || 0,
         customer_name: s.customer_name, created_at: s.sale_date || s.created_at, status: s.status
       })));
       const productSales = productReportRes.data.data || [];
-      setTopProducts(productSales.slice(0, 5).map((p: any) => ({
-        product_id: p.product_id || 0, product_name: p.product_name,
+      setTopProducts(productSales.slice(0, 5).map((p: any, idx: number) => ({
+        product_id: p.product_id ?? idx + 1, product_name: p.product_name,
         quantity_sold: p.total_quantity || 0, revenue: p.total_revenue || 0
       })));
     } catch (e) {
@@ -298,35 +304,29 @@ const Dashboard = () => {
                 <option value="year">Last Year</option>
               </select>
             </div>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={chartPeriod}
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="h-72 w-full"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#10B981" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={v => `${currency}${v}`} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px -5px rgb(0 0 0 / 0.15)', padding: '12px 16px' }}
-                      formatter={(value: any, name: any) =>
-                        name === 'sales' ? [`${currency}${Number(value).toFixed(0)}`, 'Revenue'] : [value, 'Orders']
-                      }
-                    />
-                    <Area type="monotone" dataKey="sales" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorSales)" dot={false} activeDot={{ r: 5, fill: '#10B981' }} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </motion.div>
-            </AnimatePresence>
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height={288}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#10B981" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid key="grid" strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                  <XAxis key="xaxis" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} />
+                  <YAxis key="yaxis" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={v => `${currency}${v}`} />
+                  <Tooltip
+                    key="tooltip"
+                    contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px -5px rgb(0 0 0 / 0.15)', padding: '12px 16px' }}
+                    formatter={(value: any, name: any) =>
+                      name === 'sales' ? [`${currency}${Number(value).toFixed(0)}`, 'Revenue'] : [value, 'Orders']
+                    }
+                  />
+                  <Area key="area" type="monotone" dataKey="sales" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorSales)" dot={false} activeDot={{ r: 5, fill: '#10B981' }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
           {/* Quick Actions + Tip */}

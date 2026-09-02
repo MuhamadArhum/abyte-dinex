@@ -6,7 +6,17 @@ import { localToday } from '../../utils/dateUtils';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 
-interface StockCountItem {
+interface RawProduct {
+  product_id: number;
+  product_name: string;
+  barcode: string | null;
+  sku: string | null;
+  category_name: string | null;
+  available_stock?: number;
+  stock_quantity?: number;
+}
+
+interface PageItem {
   product_id: number;
   product_name: string;
   barcode: string | null;
@@ -27,92 +37,147 @@ const STATUS_OPTIONS = [
 
 const StockCount = () => {
   const confirm = useConfirm();
-  const { error } = useToast();
-  const [items, setItems] = useState<StockCountItem[]>([]);
+  const { error, success } = useToast();
+  const barcodeRef = useRef<HTMLInputElement>(null);
+
+  // Current page raw products
+  const [items, setItems] = useState<RawProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<{ category_id: number; category_name: string }[]>([]);
+
+  // Physical counts entered by user — persisted across page changes
+  const [countsMap, setCountsMap] = useState<Record<number, number | null>>({});
+  // System stock cache for all products ever loaded — needed for cross-page stats
+  const [systemStockCache, setSystemStockCache] = useState<Record<number, number>>({});
+
+  // Server-side pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Filters
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [categories, setCategories] = useState<{ category_id: number; category_name: string }[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string>(''); // holds category_id as string
+
+  // UI state
   const [applying, setApplying] = useState(false);
   const [applySuccess, setApplySuccess] = useState(false);
   const [barcodeInput, setBarcodeInput] = useState('');
-  const barcodeRef = useRef<HTMLInputElement>(null);
+  const [categoriesFetched, setCategoriesFetched] = useState(false);
 
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
-
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = useCallback(async (resetPage = false) => {
     setLoading(true);
     try {
+      const page = resetPage ? 1 : currentPage;
+      const params: Record<string, any> = { page, limit: itemsPerPage };
+      if (search) params.search = search;
+      if (categoryFilter) params.category = categoryFilter;
+
       const [productsRes, catRes] = await Promise.all([
-        api.get('/products', { params: { limit: 500 } }),
-        api.get('/products/categories'),
+        api.get('/products', { params }),
+        categoriesFetched ? Promise.resolve(null) : api.get('/products/categories'),
       ]);
-      const products = productsRes.data.data || productsRes.data || [];
-      setCategories(catRes.data.data || catRes.data || []);
-      // Initialize with system stock, physical_count = null
-      setItems(products.map((p: any) => ({
-        product_id: p.product_id,
-        product_name: p.product_name,
-        barcode: p.barcode || null,
-        sku: p.sku || null,
-        category_name: p.category_name || null,
-        system_stock: p.available_stock ?? p.stock_quantity ?? 0,
-        physical_count: null,
-        discrepancy: null,
-      })));
+
+      const products: RawProduct[] = productsRes.data.data || productsRes.data || [];
+      const pagination = productsRes.data.pagination || {};
+
+      setItems(products);
+      setTotalProducts(pagination.total ?? products.length);
+      setTotalPages(pagination.totalPages ?? 1);
+      if (resetPage) setCurrentPage(1);
+
+      // Cache system stock for every product we load (accumulates across pages)
+      setSystemStockCache(prev => {
+        const next = { ...prev };
+        for (const p of products) {
+          next[p.product_id] = p.available_stock ?? p.stock_quantity ?? 0;
+        }
+        return next;
+      });
+
+      if (catRes) {
+        setCategories(catRes.data.data || catRes.data || []);
+        setCategoriesFetched(true);
+      }
     } catch (err) {
       console.error('Failed to fetch products', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, itemsPerPage, search, categoryFilter, categoriesFetched]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
   const setCount = (productId: number, value: number | null) => {
-    setItems(prev => prev.map(item => {
-      if (item.product_id !== productId) return item;
-      if (value === null) return { ...item, physical_count: null, discrepancy: null };
-      const count = Math.max(0, value);
-      return { ...item, physical_count: count, discrepancy: count - item.system_stock };
+    setCountsMap(prev => ({
+      ...prev,
+      [productId]: value === null ? null : Math.max(0, value),
     }));
   };
 
-  const handleBarcodeSearch = (code: string) => {
+  const handleBarcodeSearch = async (code: string) => {
     if (!code.trim()) return;
-    const found = items.find(i => i.barcode === code.trim() || i.sku === code.trim());
-    if (found) {
-      // Auto-focus the count input for this item
-      const input = document.getElementById(`count-${found.product_id}`);
-      if (input) {
-        input.focus();
-        (input as HTMLInputElement).select();
+    setBarcodeInput('');
+
+    // First check current page
+    const onPage = items.find(i => i.barcode === code.trim() || i.sku === code.trim());
+    if (onPage) {
+      const input = document.getElementById(`count-${onPage.product_id}`);
+      if (input) { input.focus(); (input as HTMLInputElement).select(); }
+      document.getElementById(`row-${onPage.product_id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    // Search server-side for this barcode
+    try {
+      const res = await api.get('/products', { params: { search: code.trim(), limit: 1 } });
+      const products: RawProduct[] = res.data.data || res.data || [];
+      if (products.length > 0) {
+        // Cache its system stock and navigate to it via search
+        setSystemStockCache(prev => ({
+          ...prev,
+          [products[0].product_id]: products[0].available_stock ?? products[0].stock_quantity ?? 0,
+        }));
+        setSearch(code.trim());
+        setCurrentPage(1);
+        success(`Found: ${products[0].product_name}`);
+      } else {
+        error(`Product not found: ${code}`);
       }
-      // Scroll to the item
-      document.getElementById(`row-${found.product_id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } else {
+    } catch {
       error(`Product not found: ${code}`);
     }
-    setBarcodeInput('');
   };
 
   const applyAdjustments = async () => {
-    const discrepancies = items.filter(i => i.physical_count !== null && i.discrepancy !== 0);
+    // Collect all counted discrepancies across all pages using cached system stock
+    const discrepancies = Object.entries(countsMap)
+      .filter(([id, count]) => count !== null && count !== (systemStockCache[+id] ?? 0))
+      .map(([id, count]) => ({
+        product_id: +id,
+        physical_count: count as number,
+        system_stock: systemStockCache[+id] ?? 0,
+      }));
+
     if (discrepancies.length === 0) {
-      error('No discrepancies to apply. Count all products first, or there are no differences.');
+      error('No discrepancies to apply. Count products first, or there are no differences.');
       return;
     }
-    const ok = await confirm({ title: 'Apply Adjustments', message: `Apply ${discrepancies.length} stock adjustment(s) for counted items with discrepancies?`, type: 'warning' });
+    const ok = await confirm({
+      title: 'Apply Adjustments',
+      message: `Apply ${discrepancies.length} stock adjustment(s) for counted items with discrepancies?`,
+      type: 'warning',
+    });
     if (!ok) return;
+
     setApplying(true);
     try {
       for (const item of discrepancies) {
-        // 'correction' type sets stock to absolute quantity_adjusted value
         await api.post('/stock-adjustments', {
           product_id: item.product_id,
           adjustment_type: 'correction',
@@ -122,6 +187,7 @@ const StockCount = () => {
       }
       setApplySuccess(true);
       setTimeout(() => setApplySuccess(false), 3000);
+      // Refresh current page (system stocks will have changed)
       fetchProducts();
     } catch (err: any) {
       error(err.response?.data?.message || 'Failed to apply adjustments');
@@ -131,19 +197,15 @@ const StockCount = () => {
   };
 
   const exportCSV = () => {
-    const counted = items.filter(i => i.physical_count !== null);
-    if (counted.length === 0) { error('No counted items to export.'); return; }
-    const headers = ['Product', 'Category', 'Barcode', 'SKU', 'System Stock', 'Physical Count', 'Discrepancy', 'Status'];
-    const rows = counted.map(i => [
-      i.product_name,
-      i.category_name || '',
-      i.barcode || '',
-      i.sku || '',
-      i.system_stock,
-      i.physical_count,
-      i.discrepancy,
-      i.discrepancy === 0 ? 'Match' : i.discrepancy! > 0 ? 'Surplus' : 'Shortage',
-    ]);
+    const countedEntries = Object.entries(countsMap).filter(([, v]) => v !== null);
+    if (countedEntries.length === 0) { error('No counted items to export.'); return; }
+
+    const headers = ['Product ID', 'System Stock', 'Physical Count', 'Discrepancy', 'Status'];
+    const rows = countedEntries.map(([id, count]) => {
+      const systemStock = systemStockCache[+id] ?? 0;
+      const diff = (count as number) - systemStock;
+      return [id, systemStock, count, diff, diff === 0 ? 'Match' : diff > 0 ? 'Surplus' : 'Shortage'];
+    });
     const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -154,27 +216,41 @@ const StockCount = () => {
     URL.revokeObjectURL(url);
   };
 
-  // Stats
-  const totalItems = items.length;
-  const countedItems = items.filter(i => i.physical_count !== null).length;
-  const matchedItems = items.filter(i => i.discrepancy === 0 && i.physical_count !== null).length;
-  const discrepancyItems = items.filter(i => i.discrepancy !== null && i.discrepancy !== 0).length;
+  // Cross-page stats computed from countsMap + systemStockCache
+  const countedIds = Object.keys(countsMap)
+    .map(Number)
+    .filter(id => countsMap[id] !== null);
+  const countedItems = countedIds.length;
+  const matchedItems = countedIds.filter(id => countsMap[id] === (systemStockCache[id] ?? 0)).length;
+  const discrepancyItems = countedIds.filter(id => countsMap[id] !== (systemStockCache[id] ?? 0)).length;
 
-  // Filter
-  const filtered = items.filter(item => {
-    const matchSearch = !search || item.product_name.toLowerCase().includes(search.toLowerCase()) ||
-      item.barcode?.toLowerCase().includes(search.toLowerCase()) || item.sku?.toLowerCase().includes(search.toLowerCase());
-    const matchCat = !categoryFilter || item.category_name === categoryFilter;
-    const matchStatus = !statusFilter ||
-      (statusFilter === 'counted' && item.physical_count !== null) ||
-      (statusFilter === 'uncounted' && item.physical_count === null) ||
-      (statusFilter === 'match' && item.discrepancy === 0 && item.physical_count !== null) ||
-      (statusFilter === 'discrepancy' && item.discrepancy !== null && item.discrepancy !== 0);
-    return matchSearch && matchCat && matchStatus;
+  // Merge current page products with countsMap for display
+  const pageItems: PageItem[] = items.map(p => {
+    const systemStock = p.available_stock ?? p.stock_quantity ?? 0;
+    const physical = countsMap[p.product_id] ?? null;
+    const discrepancy = physical !== null ? physical - systemStock : null;
+    return {
+      product_id: p.product_id,
+      product_name: p.product_name,
+      barcode: p.barcode,
+      sku: p.sku,
+      category_name: p.category_name,
+      system_stock: systemStock,
+      physical_count: physical,
+      discrepancy,
+    };
   });
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  // Status filter applied client-side to current page rows
+  const displayItems = statusFilter
+    ? pageItems.filter(item => {
+        if (statusFilter === 'counted') return item.physical_count !== null;
+        if (statusFilter === 'uncounted') return item.physical_count === null;
+        if (statusFilter === 'match') return item.discrepancy === 0 && item.physical_count !== null;
+        if (statusFilter === 'discrepancy') return item.discrepancy !== null && item.discrepancy !== 0;
+        return true;
+      })
+    : pageItems;
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -193,7 +269,7 @@ const StockCount = () => {
             <span className="hidden sm:inline">Export CSV</span>
           </button>
           <button
-            onClick={fetchProducts}
+            onClick={() => fetchProducts()}
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors text-sm"
           >
@@ -222,8 +298,8 @@ const StockCount = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total Products', value: totalItems, color: 'gray', icon: Package },
-          { label: 'Counted', value: `${countedItems}/${totalItems}`, color: 'blue', icon: ClipboardCheck },
+          { label: 'Total Products', value: totalProducts.toLocaleString(), color: 'gray', icon: Package },
+          { label: 'Counted', value: `${countedItems}/${totalProducts.toLocaleString()}`, color: 'blue', icon: ClipboardCheck },
           { label: 'Matched', value: matchedItems, color: 'emerald', icon: CheckCircle },
           { label: 'Discrepancies', value: discrepancyItems, color: discrepancyItems > 0 ? 'red' : 'gray', icon: AlertTriangle },
         ].map(s => (
@@ -242,16 +318,18 @@ const StockCount = () => {
       </div>
 
       {/* Progress Bar */}
-      {totalItems > 0 && (
+      {totalProducts > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">Count Progress</span>
-            <span className="text-sm text-gray-500">{countedItems} of {totalItems} products counted ({Math.round(countedItems / totalItems * 100)}%)</span>
+            <span className="text-sm text-gray-500">
+              {countedItems} of {totalProducts.toLocaleString()} products counted ({Math.round(countedItems / totalProducts * 100)}%)
+            </span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-3">
             <div
               className="bg-gradient-to-r from-emerald-500 to-teal-500 h-3 rounded-full transition-all duration-500"
-              style={{ width: `${totalItems > 0 ? (countedItems / totalItems) * 100 : 0}%` }}
+              style={{ width: `${(countedItems / totalProducts) * 100}%` }}
             />
           </div>
         </div>
@@ -298,11 +376,11 @@ const StockCount = () => {
           className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none min-w-[150px]"
         >
           <option value="">All Categories</option>
-          {categories.map(c => <option key={c.category_id} value={c.category_name}>{c.category_name}</option>)}
+          {categories.map(c => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
         </select>
         <select
           value={statusFilter}
-          onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+          onChange={e => setStatusFilter(e.target.value)}
           className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none min-w-[140px]"
         >
           {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -330,7 +408,13 @@ const StockCount = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {paginated.map(item => (
+                  {displayItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-5 py-12 text-center text-gray-400 text-sm">
+                        No products found
+                      </td>
+                    </tr>
+                  ) : displayItems.map(item => (
                     <tr
                       key={item.product_id}
                       id={`row-${item.product_id}`}
@@ -410,12 +494,11 @@ const StockCount = () => {
               </table>
             </div>
 
-            {/* Pagination */}
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
-              totalItems={filtered.length}
+              totalItems={totalProducts}
               itemsPerPage={itemsPerPage}
               onItemsPerPageChange={(limit) => { setItemsPerPage(limit); setCurrentPage(1); }}
             />

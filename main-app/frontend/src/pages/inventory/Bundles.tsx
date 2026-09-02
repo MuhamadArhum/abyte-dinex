@@ -65,9 +65,11 @@ const Bundles = () => {
   const [activeFilter, setActiveFilter] = useState('');
   const [expandedBundle, setExpandedBundle] = useState<number | null>(null);
 
-  // Pagination
+  // Pagination (server-side)
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -83,14 +85,19 @@ const Bundles = () => {
   const fetchBundles = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/bundles');
-      setBundles(res.data || []);
+      const params: any = { page: currentPage, limit: itemsPerPage };
+      if (search)       params.search      = search;
+      if (activeFilter) params.active_only = activeFilter === 'active' ? 'true' : undefined;
+      const res = await api.get('/bundles', { params });
+      setBundles(res.data.data || []);
+      setTotalItems(res.data.pagination?.total ?? 0);
+      setTotalPages(res.data.pagination?.totalPages ?? 1);
     } catch (err) {
       console.error('Failed to fetch bundles', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage, itemsPerPage, search, activeFilter]);
 
   const fetchProducts = async () => {
     try {
@@ -218,14 +225,7 @@ const Bundles = () => {
     setForm(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== idx) }));
   };
 
-  const filteredBundles = bundles.filter(b => {
-    const matchSearch = !search || b.bundle_name.toLowerCase().includes(search.toLowerCase());
-    const matchActive = !activeFilter || (activeFilter === 'active' ? b.is_active : !b.is_active);
-    return matchSearch && matchActive;
-  });
-
-  const totalPages = Math.ceil(filteredBundles.length / itemsPerPage);
-  const paginated = filteredBundles.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const paginated = bundles;
 
   const filteredProductOptions = products.filter(p =>
     p.product_name.toLowerCase().includes(productSearch.toLowerCase()) &&
@@ -407,18 +407,14 @@ const Bundles = () => {
           </div>
         )}
 
-        {totalPages > 1 && (
-          <div className="px-6 py-3 border-t border-gray-100">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filteredBundles.length}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setCurrentPage}
-              onItemsPerPageChange={() => {}}
-            />
-          </div>
-        )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={n => { setItemsPerPage(n); setCurrentPage(1); }}
+        />
       </div>
 
       {/* Create/Edit Modal */}

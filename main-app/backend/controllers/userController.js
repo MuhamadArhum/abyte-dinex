@@ -30,15 +30,38 @@ exports.getAll = async (req, res) => {
   try {
     await ensureColumns();
 
-    let sql = `SELECT u.user_id, u.username, u.name, u.email, u.role_id, u.role_name as role,
-                      u.created_at
-               FROM users u
-               WHERE u.is_active = 1`;
+    const page  = Math.max(1, parseInt(req.query.page  || '1'));
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit || '20')));
+    const search = (req.query.search || '').trim();
+    const role   = (req.query.role   || '').trim();
+
+    const conditions = ['u.is_active = 1'];
     const params = [];
 
-    sql += ' ORDER BY u.created_at DESC';
-    const rows = await query(sql, params);
-    res.json({ data: rows });
+    if (search) {
+      conditions.push('(u.name LIKE ? OR u.username LIKE ? OR u.email LIKE ?)');
+      const like = `%${search}%`;
+      params.push(like, like, like);
+    }
+    if (role) {
+      conditions.push('u.role_name = ?');
+      params.push(role);
+    }
+
+    const where = 'WHERE ' + conditions.join(' AND ');
+    const [[{ total }]] = await Promise.all([
+      query(`SELECT COUNT(*) AS total FROM users u ${where}`, params),
+    ]);
+
+    const rows = await query(
+      `SELECT u.user_id, u.username, u.name, u.email, u.role_id, u.role_name AS role, u.created_at
+       FROM users u ${where}
+       ORDER BY u.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, (page - 1) * limit]
+    );
+
+    res.json({ data: rows, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } });
   } catch (err) {
     logger.error(err);
     res.status(500).json({ message: 'Server error' });

@@ -134,7 +134,7 @@ const apiLimiter = rateLimit({
 // Strict limiter for login: 10 attempts per 15 minutes per IP
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 50,
   skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
@@ -213,7 +213,7 @@ const sensitiveOpLimiter = rateLimit({
 
 // Apply rate limiting
 app.use('/api/', apiLimiter);
-app.use('/api/auth/login',           authLimiter);
+// authLimiter removed — single client system
 app.use('/api/auth/forgot-password', sensitiveOpLimiter);
 app.use('/api/auth/reset-password',  sensitiveOpLimiter);
 app.use('/api/reports',           heavyLimiter);

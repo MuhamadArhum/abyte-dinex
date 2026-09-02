@@ -93,7 +93,7 @@ const MIGRATIONS = [
         [`ALTER TABLE sale_details ADD INDEX IF NOT EXISTS idx_sd_product_id (product_id)`],
         [`ALTER TABLE users ADD INDEX IF NOT EXISTS idx_user_username (username)`],
         [`ALTER TABLE users ADD INDEX IF NOT EXISTS idx_user_active (is_active)`],
-        [`ALTER TABLE users ADD INDEX IF NOT EXISTS idx_user_branch (branch_id)`],
+        // branch_id removed in phase 5 — index skipped
         [`ALTER TABLE customers ADD INDEX IF NOT EXISTS idx_customer_deleted (deleted_at)`],
         [`ALTER TABLE products ADD INDEX IF NOT EXISTS idx_product_active (is_active)`],
         [`ALTER TABLE products ADD INDEX IF NOT EXISTS idx_product_deleted (deleted_at)`],

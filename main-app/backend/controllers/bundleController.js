@@ -17,18 +17,27 @@ const round2 = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
 // Get all bundles
 exports.getAllBundles = async (req, res) => {
   try {
-    const { active_only } = req.query;
+    const { active_only, page: qPage, limit: qLimit, search } = req.query;
+    const page  = Math.max(1, parseInt(qPage  || '1'));
+    const limit = Math.min(100, Math.max(1, parseInt(qLimit || '15')));
+    const offset = (page - 1) * limit;
 
-    let sql = 'SELECT * FROM product_bundles ORDER BY created_at DESC';
-    if (active_only === 'true') {
-      sql = 'SELECT * FROM product_bundles WHERE is_active = 1 ORDER BY created_at DESC';
-    }
+    const conditions = [];
+    const params = [];
+    if (active_only === 'true') { conditions.push('is_active = 1'); }
+    if (search) { conditions.push('bundle_name LIKE ?'); params.push(`%${search}%`); }
+    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
-    const bundles = await query(sql);
+    const [[{ total }]] = await Promise.all([
+      query(`SELECT COUNT(*) AS total FROM product_bundles ${where}`, params),
+    ]);
+    const bundles = await query(
+      `SELECT * FROM product_bundles ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
 
-    // Get items for each bundle
-    for (let bundle of bundles) {
-      const items = await query(
+    for (const bundle of bundles) {
+      bundle.items = await query(
         `SELECT bi.*, p.product_name, p.price, pv.variant_name, pv.price_adjustment
          FROM bundle_items bi
          JOIN products p ON bi.product_id = p.product_id
@@ -36,10 +45,9 @@ exports.getAllBundles = async (req, res) => {
          WHERE bi.bundle_id = ?`,
         [bundle.bundle_id]
       );
-      bundle.items = items;
     }
 
-    res.json(bundles);
+    res.json({ data: bundles, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } });
   } catch (err) {
     logger.error('Get bundles error:', err);
     res.status(500).json({ message: 'Failed to fetch bundles', error: err.message });

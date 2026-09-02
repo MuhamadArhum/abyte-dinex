@@ -572,7 +572,7 @@ exports.getCustomerHistory = async (req, res) => {
     `, params);
 
     const data = await query(`
-      SELECT c.customer_id, c.customer_name, c.phone,
+      SELECT c.customer_id, c.customer_name, c.phone_number AS phone,
         COUNT(s.sale_id)             as total_orders,
         COALESCE(SUM(s.net_amount),0) as total_spent,
         COALESCE(AVG(s.net_amount),0) as avg_order,
@@ -622,7 +622,7 @@ exports.getCreditAging = async (req, res) => {
     const aging = await query(`
       SELECT cs.credit_sale_id, cs.sale_id, cs.total_amount, cs.paid_amount,
         cs.balance_due, cs.due_date, cs.status, cs.created_at,
-        c.customer_name, c.phone,
+        c.customer_name, c.phone_number AS phone,
         DATEDIFF(CURDATE(), cs.due_date) as days_overdue
       FROM credit_sales cs
       JOIN customers c ON cs.customer_id = c.customer_id
