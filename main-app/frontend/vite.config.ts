@@ -87,33 +87,6 @@ export default defineConfig({
           'vendor-icons': ['lucide-react'],
           // QZ Tray (printer bridge)
           'vendor-qz': ['qz-tray'],
-          // Accounting pages
-          'pages-accounts': [
-            './src/pages/accounts/ChartOfAccounts',
-            './src/pages/accounts/JournalEntries',
-            './src/pages/accounts/GeneralLedger',
-            './src/pages/accounts/TrialBalance',
-            './src/pages/accounts/ProfitLoss',
-            './src/pages/accounts/BalanceSheet',
-            './src/pages/accounts/BankAccounts',
-            './src/pages/accounts/PaymentVouchers',
-            './src/pages/accounts/ReceiptVouchers',
-          ],
-          // HR pages
-          'pages-hr': [
-            './src/pages/hr/Staff',
-            './src/pages/hr/Attendance',
-            './src/pages/hr/DailyAttendance',
-            './src/pages/hr/SalarySheet',
-            './src/pages/hr/PayrollProcessing',
-            './src/pages/hr/AdvancePayments',
-            './src/pages/hr/LoanManagement',
-            './src/pages/hr/HolidayCalendar',
-            './src/pages/hr/LeaveRequests',
-            './src/pages/hr/StaffReports',
-            './src/pages/hr/EmployeeLedger',
-            './src/pages/hr/IncrementHistory',
-          ],
           // Sales pages
           'pages-sales': [
             './src/pages/sales/SalesReports',
