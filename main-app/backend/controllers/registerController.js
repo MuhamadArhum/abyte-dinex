@@ -39,11 +39,7 @@ exports.getCurrentRegister = async (req, res) => {
       [register[0].register_id]
     );
 
-    const expensesResult = await query(
-      'SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE expense_date >= ?',
-      [register[0].opened_at]
-    );
-    const shift_expenses = parseFloat(expensesResult[0].total);
+    const shift_expenses = 0;
 
     const shift_sales = await query(
       `SELECT s.sale_id, s.invoice_no, s.sale_date, s.total_amount, s.payment_method, s.discount
@@ -140,12 +136,7 @@ exports.closeRegister = async (req, res) => {
 
     const reg = register[0];
 
-    // Get total expenses during this shift
-    const expensesResult = await conn.query(
-      'SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE expense_date >= ?',
-      [reg.opened_at]
-    );
-    const totalExpenses = round2(parseFloat(expensesResult[0].total));
+    const totalExpenses = 0;
 
     // Expected = Opening Balance + Cash Sales - Expenses
     const expected = round2(parseFloat(reg.opening_balance) + parseFloat(reg.cash_sales_total) - totalExpenses);

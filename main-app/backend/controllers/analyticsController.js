@@ -105,11 +105,7 @@ exports.getDashboardStats = async (req, res) => {
       WHERE sale_date BETWEEN ? AND ?
     `, salesParams);
 
-    const [expenseStats] = await query(`
-      SELECT SUM(amount) as total_expenses
-      FROM expenses
-      WHERE expense_date BETWEEN ? AND ?
-    `, [start_date, end_date]);
+    const expenseStats = { total_expenses: 0 };
 
     const topProducts = await query(`
       SELECT p.product_name, SUM(sd.quantity) as units_sold, SUM(sd.total_price) as revenue
