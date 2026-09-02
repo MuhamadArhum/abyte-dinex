@@ -2,13 +2,21 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAuthStore from '../store/authStore';
 
-export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
+const SERVER_KEY = '@waiter_server_url';
 
-const api = axios.create({ baseURL: BASE_URL, timeout: 15000 });
+// Create axios instance with a placeholder base URL.
+// The request interceptor sets the real URL dynamically from AsyncStorage
+// so that it works even when serverStore hasn't hydrated yet.
+const api = axios.create({ baseURL: 'http://localhost:5000/api', timeout: 15000 });
 
 api.interceptors.request.use(async (config) => {
+  // Always read the latest server URL from storage
+  const serverUrl = await AsyncStorage.getItem(SERVER_KEY);
+  if (serverUrl) config.baseURL = serverUrl;
+
   const token = await AsyncStorage.getItem('@waiter_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
   return config;
 });
 
@@ -22,4 +30,5 @@ api.interceptors.response.use(
   }
 );
 
+export const BASE_URL = api.defaults.baseURL;
 export default api;

@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import api from '../services/api';
 import useAuthStore from '../store/authStore';
+import useServerStore from '../store/serverStore';
 import useToastStore from '../store/toastStore';
 import { C } from '../constants/theme';
 
@@ -24,6 +25,7 @@ export default function LoginScreen() {
   const [focused, setFocused]         = useState(null);
 
   const { setAuth, token } = useAuthStore();
+  const { serverUrl, clearServerUrl } = useServerStore();
   const { showToast }      = useToastStore();
 
   const slideUp  = useRef(new Animated.Value(60)).current;
@@ -195,6 +197,20 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
+          {/* Server info + change server */}
+          {serverUrl ? (
+            <View style={styles.serverRow}>
+              <Ionicons name="wifi" size={12} color={C.primary} />
+              <Text style={styles.serverText} numberOfLines={1}>{serverUrl.replace('/api', '')}</Text>
+              <TouchableOpacity
+                onPress={async () => { await clearServerUrl(); router.replace('/setup'); }}
+                style={styles.changeBtn}
+              >
+                <Text style={styles.changeBtnText}>Change</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           {/* Footer */}
           <View style={styles.footer}>
             <View style={styles.footerLine} />
@@ -363,10 +379,21 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
 
+  // Server row
+  serverRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: C.primaryLt, borderWidth: 1, borderColor: C.primaryBd,
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7,
+    marginBottom: 16,
+  },
+  serverText: { flex: 1, fontSize: 11, color: C.primaryDk, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
+  changeBtn: { paddingHorizontal: 8, paddingVertical: 3, backgroundColor: C.primary, borderRadius: 6 },
+  changeBtnText: { fontSize: 10, fontWeight: '700', color: '#fff' },
+
   // Footer
   footer: {
     flexDirection: 'row', alignItems: 'center',
-    gap: 10, marginTop: 24,
+    gap: 10, marginTop: 8,
   },
   footerLine: { flex: 1, height: 1, backgroundColor: C.border },
   footerCenter: { flexDirection: 'row', alignItems: 'center', gap: 5 },

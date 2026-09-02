@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import QRCode from 'react-qr-code';
 import api from '../../utils/api';
 import {
   Save,
@@ -41,6 +42,8 @@ import {
   ImageOff,
   MessageCircle,
   FileCheck,
+  Smartphone,
+  Wifi,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
@@ -64,6 +67,14 @@ const Settings = () => {
   const { refreshSettings } = useSettings();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('store');
+  const [qrCopied, setQrCopied] = useState(false);
+
+  // Auto-detect server URL for Waiter App QR
+  const waiterApiUrl = useMemo(() => {
+    const host = window.location.hostname;
+    return `http://${host}:5000/api`;
+  }, []);
+  const waiterQrPayload = JSON.stringify({ url: waiterApiUrl, app: 'abyte-waiter' });
 
   // All settings from DB
   const [settings, setSettings] = useState<any>({
@@ -538,6 +549,7 @@ const Settings = () => {
     { id: 'printer',    name: 'Printer',           icon: Printer,     adminOnly: true },
     { id: 'security',   name: 'Security',          icon: Shield },
     { id: 'integrations', name: 'WhatsApp & FBR',   icon: MessageCircle, adminOnly: true },
+    { id: 'waiter',     name: 'Waiter App',        icon: Smartphone,  adminOnly: true },
     { id: 'system',     name: 'System',            icon: Server,      adminOnly: true },
   ];
 
@@ -1936,6 +1948,72 @@ const Settings = () => {
                 </div>
               </div>
 
+            </div>
+          )}
+
+          {/* ========== WAITER APP TAB ========== */}
+          {activeTab === 'waiter' && currentUser?.role_name === 'Admin' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-base font-semibold text-gray-800 mb-1">Waiter App Connection</h2>
+                <p className="text-sm text-gray-500">Scan this QR code from the Waiter App to connect it to this server automatically.</p>
+              </div>
+
+              <div className="flex flex-col md:flex-row gap-6">
+                {/* QR Code Card */}
+                <div className="flex-1 bg-white border-2 border-emerald-200 rounded-2xl p-6 flex flex-col items-center gap-4">
+                  <div className="flex items-center gap-2 text-emerald-700 font-semibold text-sm">
+                    <Wifi size={16} />
+                    Connection QR Code
+                  </div>
+                  <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <QRCode value={waiterQrPayload} size={200} level="M" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 mb-1">Server URL</p>
+                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                      <code className="text-xs text-emerald-700 font-mono">{waiterApiUrl}</code>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(waiterApiUrl);
+                          setQrCopied(true);
+                          setTimeout(() => setQrCopied(false), 2000);
+                        }}
+                        className="text-gray-400 hover:text-emerald-600 transition-colors flex-shrink-0"
+                        title="Copy URL"
+                      >
+                        {qrCopied ? <CheckCircle size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Instructions Card */}
+                <div className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center gap-2 text-gray-700 font-semibold text-sm">
+                    <Smartphone size={16} />
+                    How to Connect
+                  </div>
+                  {[
+                    { step: '1', text: 'Make sure the Waiter\'s phone is connected to the same WiFi as this server.' },
+                    { step: '2', text: 'Open the Waiter App on the phone.' },
+                    { step: '3', text: 'On the setup screen, tap "Scan QR Code".' },
+                    { step: '4', text: 'Point the camera at the QR code on the left.' },
+                    { step: '5', text: 'App will auto-configure and go to the login screen.' },
+                  ].map(({ step, text }) => (
+                    <div key={step} className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                        {step}
+                      </div>
+                      <p className="text-sm text-gray-600">{text}</p>
+                    </div>
+                  ))}
+                  <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                    <p className="text-xs text-amber-700 font-medium">Manual entry fallback</p>
+                    <p className="text-xs text-amber-600 mt-1">If QR scan doesn't work, tap "Enter IP Manually" in the app and type the Server URL shown above.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

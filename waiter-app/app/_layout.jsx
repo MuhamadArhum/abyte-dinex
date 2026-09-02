@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import useAuthStore from '../store/authStore';
+import useServerStore from '../store/serverStore';
 import useOfflineQueue from '../store/offlineQueue';
 import api from '../services/api';
 import Toast from '../components/Toast';
@@ -53,11 +54,12 @@ const ebStyles = StyleSheet.create({
 
 export default function RootLayout() {
   const { loadAuth } = useAuthStore();
+  const { loadServerUrl } = useServerStore();
   const { loadQueue, syncQueue } = useOfflineQueue();
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
-    loadAuth().finally(() => SplashScreen.hideAsync());
+    Promise.all([loadServerUrl(), loadAuth()]).finally(() => SplashScreen.hideAsync());
     loadQueue();
   }, []);
 
@@ -78,6 +80,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="setup" />
           <Stack.Screen name="login" />
           <Stack.Screen name="(main)" />
         </Stack>

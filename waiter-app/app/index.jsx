@@ -1,14 +1,16 @@
 import { Redirect } from 'expo-router';
 import { View, Image, ActivityIndicator, StyleSheet } from 'react-native';
 import useAuthStore from '../store/authStore';
+import useServerStore from '../store/serverStore';
 import { C } from '../constants/theme';
 
 const logo = require('../assets/logo.png');
 
 export default function Index() {
-  const { token, isLoading } = useAuthStore();
+  const { token, isLoading: authLoading } = useAuthStore();
+  const { serverUrl, isLoaded: serverLoaded } = useServerStore();
 
-  if (isLoading) {
+  if (authLoading || !serverLoaded) {
     return (
       <View style={styles.loader}>
         <Image source={logo} style={styles.logo} resizeMode="contain" />
@@ -16,6 +18,9 @@ export default function Index() {
       </View>
     );
   }
+
+  // No server configured yet — go to setup
+  if (!serverUrl) return <Redirect href="/setup" />;
 
   if (token) return <Redirect href="/(main)/(tabs)/home" />;
   return <Redirect href="/login" />;
