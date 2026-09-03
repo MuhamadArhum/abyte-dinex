@@ -48,14 +48,10 @@ import {
   AlertTriangle,
   History,
   Barcode,
-  X,
-  Info,
-  Wrench,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import AIWidget from './AIWidget';
-import api from '../utils/api';
 import ProfileModal from './ProfileModal';
 import { usePrintQueue } from '../hooks/usePrintQueue';
 
@@ -68,177 +64,6 @@ interface MenuItem {
   color?: string;
   isSection?: boolean;
   children?: MenuItem[];
-}
-
-interface AnnouncementItem { id: number; title: string; message: string; type: 'info' | 'warning' | 'maintenance' | 'success' | 'urgent'; }
-
-const POPUP_CONFIG: Record<string, {
-  label: string; icon: any;
-  iconBg: string; iconColor: string;
-  accentBar: string;
-  labelColor: string;
-  btnStyle: string;
-  dotColor: string;
-}> = {
-  info:        { label: 'Announcement', icon: Info,          iconBg: 'bg-indigo-100',  iconColor: 'text-indigo-600',  accentBar: 'bg-indigo-500',  labelColor: 'text-indigo-500',  btnStyle: 'bg-indigo-600 hover:bg-indigo-700',   dotColor: 'bg-indigo-500'  },
-  warning:     { label: 'Warning',      icon: AlertTriangle, iconBg: 'bg-amber-100',   iconColor: 'text-amber-600',   accentBar: 'bg-amber-400',   labelColor: 'text-amber-500',   btnStyle: 'bg-amber-500 hover:bg-amber-600',     dotColor: 'bg-amber-500'   },
-  maintenance: { label: 'Maintenance',  icon: Wrench,        iconBg: 'bg-rose-100',    iconColor: 'text-rose-600',    accentBar: 'bg-rose-500',    labelColor: 'text-rose-500',    btnStyle: 'bg-rose-600 hover:bg-rose-700',       dotColor: 'bg-rose-500'    },
-  success:     { label: 'New Update',   icon: CheckCircle,   iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', accentBar: 'bg-emerald-500', labelColor: 'text-emerald-600', btnStyle: 'bg-emerald-600 hover:bg-emerald-700', dotColor: 'bg-emerald-500' },
-};
-
-function AnnouncementBanner() {
-  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
-  const [dismissed, setDismissed]         = useState<Set<number>>(new Set());
-  const [current, setCurrent]             = useState(0);
-  const [visible, setVisible]             = useState(false);
-
-  useEffect(() => {
-    api.get('/announcements/active').then(r => {
-      if (r.data.length > 0) {
-        setAnnouncements(r.data);
-        setTimeout(() => setVisible(true), 600);
-        // Record view for all fetched announcements (fire-and-forget)
-        r.data.forEach((ann: AnnouncementItem) => {
-          api.post(`/announcements/${ann.id}/view`).catch(() => {});
-        });
-      }
-    }).catch(() => {});
-  }, []);
-
-  const active = announcements.filter(a => !dismissed.has(a.id));
-
-  const dismiss = (id: number) => {
-    setVisible(false);
-    setTimeout(() => {
-      setDismissed(d => new Set([...d, id]));
-      const remaining = active.filter(a => a.id !== id);
-      if (remaining.length > 0) {
-        setCurrent(0);
-        setTimeout(() => setVisible(true), 300);
-      }
-    }, 300);
-  };
-
-  const next = () => {
-    setVisible(false);
-    setTimeout(() => { setCurrent(i => (i + 1) % active.length); setVisible(true); }, 250);
-  };
-
-  if (active.length === 0) return null;
-  const a = active[Math.min(current, active.length - 1)];
-  if (!a) return null;
-  const cfg = POPUP_CONFIG[a.type] || POPUP_CONFIG.info;
-  const Icon = cfg.icon;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
-      style={{
-        backgroundColor: visible ? 'rgba(2,6,23,0.72)' : 'rgba(2,6,23,0)',
-        backdropFilter: visible ? 'blur(8px)' : 'blur(0px)',
-        transition: 'background-color 0.3s ease, backdrop-filter 0.3s ease',
-        pointerEvents: visible ? 'auto' : 'none',
-      }}
-      onClick={(e) => { if (e.target === e.currentTarget) dismiss(a.id); }}
-    >
-      <div
-        className="w-full"
-        style={{
-          maxWidth: 460,
-          transform: visible ? 'translateY(0) scale(1)' : 'translateY(24px) scale(0.94)',
-          opacity: visible ? 1 : 0,
-          transition: 'transform 0.42s cubic-bezier(0.34,1.56,0.64,1), opacity 0.28s ease',
-        }}
-      >
-        <div className="bg-white rounded-2xl shadow-2xl shadow-black/20 overflow-hidden">
-
-          {/* Top accent bar */}
-          <div className={`h-1 w-full ${cfg.accentBar}`} />
-
-          {/* Card body */}
-          <div className="p-6 sm:p-8">
-
-            {/* Top row: branding + close */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <img src="/logo.png" alt="AByte" className="w-5 h-5 object-contain opacity-80" />
-                <span className="text-xs font-semibold text-slate-400 tracking-widest uppercase">AByte ERP</span>
-              </div>
-              <div className="flex items-center gap-3">
-                {active.length > 1 && (
-                  <span className="text-[11px] font-semibold text-slate-400">
-                    {current + 1} / {active.length}
-                  </span>
-                )}
-                <button
-                  onClick={() => dismiss(a.id)}
-                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
-                >
-                  <X size={14} className="text-slate-500" />
-                </button>
-              </div>
-            </div>
-
-            {/* Icon + type */}
-            <div className="flex items-center gap-3 mb-5">
-              <div className={`w-12 h-12 rounded-xl ${cfg.iconBg} flex items-center justify-center flex-shrink-0`}>
-                <Icon size={22} className={cfg.iconColor} />
-              </div>
-              <span className={`text-xs font-black uppercase tracking-[0.18em] ${cfg.labelColor}`}>
-                {cfg.label}
-              </span>
-            </div>
-
-            {/* Title */}
-            <h2 className="text-slate-900 font-black text-xl sm:text-2xl leading-tight mb-3">
-              {a.title}
-            </h2>
-
-            {/* Divider */}
-            <div className="w-10 h-0.5 bg-slate-200 mb-4 rounded-full" />
-
-            {/* Message */}
-            <p className="text-slate-500 text-sm sm:text-[15px] leading-relaxed mb-8">
-              {a.message}
-            </p>
-
-            {/* Actions */}
-            <div className="flex items-center gap-3">
-              {active.length > 1 && (
-                <button
-                  onClick={next}
-                  className="flex-1 py-3 text-sm font-bold border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors"
-                >
-                  Next →
-                </button>
-              )}
-              <button
-                onClick={() => dismiss(a.id)}
-                className={`flex-1 py-3 text-sm font-bold text-white rounded-xl transition-all ${cfg.btnStyle} shadow-sm`}
-              >
-                Got it, thanks!
-              </button>
-            </div>
-
-            {/* Progress dots for multiple */}
-            {active.length > 1 && (
-              <div className="flex justify-center gap-1.5 mt-5">
-                {active.map((_, i) => (
-                  <div
-                    key={i}
-                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                      i === current ? `w-5 ${cfg.dotColor}` : 'w-1.5 bg-slate-200'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
-
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -805,7 +630,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto flex flex-col relative">
-          <AnnouncementBanner />
           <motion.div
             key={location.pathname}
             initial={{ opacity: 0, y: 10 }}

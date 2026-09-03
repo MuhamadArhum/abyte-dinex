@@ -75,8 +75,6 @@ const ACTION_COLORS: Record<string, string> = {
   JOURNAL_ENTRY_CREATED: 'bg-emerald-100 text-emerald-700',
   PAYMENT_VOUCHER_CREATED: 'bg-emerald-100 text-emerald-700',
   RECEIPT_VOUCHER_CREATED: 'bg-emerald-100 text-emerald-700',
-  COUPON_CREATED: 'bg-pink-100 text-pink-700',
-  COUPON_UPDATED: 'bg-pink-100 text-pink-700',
 };
 
 function parseJSON(val: string | null): Record<string, unknown> | null {

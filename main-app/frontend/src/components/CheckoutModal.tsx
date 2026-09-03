@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, Banknote, Smartphone, Check, Loader2, Printer, Tag, Star, BookOpen, Percent, CloudUpload, Truck, FileText, MessageCircle, Send, CheckCircle } from 'lucide-react';
+import { X, CreditCard, Banknote, Smartphone, Check, Loader2, Printer, Tag, BookOpen, Percent, CloudUpload, Truck, FileText, MessageCircle, Send, CheckCircle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
@@ -45,17 +45,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
   const [pendingAdditionalRate, setPendingAdditionalRate] = useState(0);
   const [pendingItemsLoading, setPendingItemsLoading] = useState(false);
 
-  // Coupon state
-  const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
-  const [couponError, setCouponError] = useState('');
-  const [applyingCoupon, setApplyingCoupon] = useState(false);
-
-  // Loyalty state
-  const [loyaltyInfo, setLoyaltyInfo] = useState<any>(null);
-  const [redeemPoints, setRedeemPoints] = useState(false);
-  const [pointsToRedeem, setPointsToRedeem] = useState('');
-
   // Credit sale state
   const [creditDueDate, setCreditDueDate] = useState('');
 
@@ -79,11 +68,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
       setDiscount('');
       setNote('');
       setPaymentMethod('cash');
-      setCouponCode('');
-      setAppliedCoupon(null);
-      setCouponError('');
-      setRedeemPoints(false);
-      setPointsToRedeem('');
       setCreditDueDate('');
       setPendingItems([]);
       setPendingTaxRate(0);
@@ -97,11 +81,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
         setPendingAdditionalRate(0);
       }
       fetchSettings();
-      if (selectedCustomer && selectedCustomer.customer_id !== 1) {
-        fetchLoyaltyInfo(selectedCustomer.customer_id);
-      } else {
-        setLoyaltyInfo(null);
-      }
       // If paying a pending sale (not cart-edit mode), fetch its items
       if (pendingSale?.sale_id && !pendingSale.isCartEdit) {
         fetchPendingSaleDetails(pendingSale.sale_id);
@@ -148,50 +127,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
     } catch { /* silent — whatsapp may not be configured */ }
   };
 
-  const fetchLoyaltyInfo = async (customerId: number) => {
-    try {
-      const [configRes, pointsRes] = await Promise.all([
-        api.get('/loyalty/config'),
-        api.get(`/loyalty/customer/${customerId}`)
-      ]);
-      if (configRes.data?.is_active) {
-        setLoyaltyInfo({
-          config: configRes.data,
-          points: pointsRes.data?.loyalty_points || 0
-        });
-      } else {
-        setLoyaltyInfo(null);
-      }
-    } catch {
-      setLoyaltyInfo(null);
-    }
-  };
-
-  const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) return;
-    setApplyingCoupon(true);
-    setCouponError('');
-    try {
-      const res = await api.post('/coupons/validate', {
-        code: couponCode.trim(),
-        order_total: baseTotal
-      });
-      setAppliedCoupon(res.data);
-      setCouponError('');
-    } catch (err: any) {
-      setCouponError(err.response?.data?.message || 'Invalid coupon');
-      setAppliedCoupon(null);
-    } finally {
-      setApplyingCoupon(false);
-    }
-  };
-
-  const removeCoupon = () => {
-    setAppliedCoupon(null);
-    setCouponCode('');
-    setCouponError('');
-  };
-
   // When user clicks a payment method button, also sync pendingTaxRate for pending sales
   // (skip if original DB tax was 0 — those are 0-tax order types like TA)
   const handleSetPaymentMethod = (method: 'cash' | 'card' | 'online' | 'split' | 'credit') => {
@@ -222,17 +157,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
     - (isPendingMode ? 0 : bundleDiscount);
 
   const discountValue = parseFloat(discount) || 0;
-  const couponDiscount = appliedCoupon ? parseFloat(appliedCoupon.discount_amount) : 0;
-
-  // Loyalty redemption calculation
-  let loyaltyDiscount = 0;
-  if (redeemPoints && loyaltyInfo) {
-    const pts = parseInt(pointsToRedeem) || 0;
-    const maxPts = Math.min(pts, loyaltyInfo.points, loyaltyInfo.config.min_redeem_points ? Math.max(pts, 0) : pts);
-    loyaltyDiscount = maxPts * parseFloat(loyaltyInfo.config.amount_per_point || 0);
-  }
-
-  const finalTotal = Math.round(Math.max(0, baseTotal - discountValue - couponDiscount - loyaltyDiscount));
+  const finalTotal = Math.round(Math.max(0, baseTotal - discountValue));
   const effectiveAmountPaid = parseFloat(amountPaid) || 0;
   const changeDue = (paymentMethod === 'split' || paymentMethod === 'credit' || amountPaid === '')
     ? 0
@@ -306,13 +231,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
         const ot = pendingSale?.order_type;
         if (ot === 'dine_in' || ot === 'takeaway') setTimeout(() => doKOT(completedSale), 400);
       } else {
-        // Build loyalty redeem points
-        let loyaltyRedeemPts = 0;
-        if (redeemPoints && loyaltyInfo) {
-          loyaltyRedeemPts = parseInt(pointsToRedeem) || 0;
-          loyaltyRedeemPts = Math.min(loyaltyRedeemPts, loyaltyInfo.points);
-        }
-
         const payload: any = {
           items: cart.map(item => ({
             product_id: item.product_id,
@@ -334,17 +252,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
           note: noteStr,
           applied_bundles: appliedBundles || []
         };
-
-        // Coupon
-        if (appliedCoupon) {
-          payload.coupon_code = couponCode.trim();
-          payload.coupon_discount = couponDiscount;
-        }
-
-        // Loyalty
-        if (loyaltyRedeemPts > 0) {
-          payload.loyalty_redeem_points = loyaltyRedeemPts;
-        }
 
         // Credit sale
         if (paymentMethod === 'credit') {
@@ -531,13 +438,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
           ) : (
             <p className="text-gray-500 mb-8">
               Change Due: <span className="font-bold text-emerald-600">Rs. {r(changeDueAmount)}</span>
-            </p>
-          )}
-
-          {successSale.loyalty_points_earned > 0 && (
-            <p className="text-amber-600 text-sm mb-4">
-              <Star size={14} className="inline mr-1" />
-              {successSale.loyalty_points_earned} loyalty points earned!
             </p>
           )}
 
@@ -764,18 +664,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
                  />
                </div>
             </div>
-            {couponDiscount > 0 && (
-              <div className="flex justify-between items-center text-green-600">
-                <span className="flex items-center gap-1"><Tag size={14} /> Coupon</span>
-                <span>- Rs. {r(couponDiscount)}</span>
-              </div>
-            )}
-            {loyaltyDiscount > 0 && (
-              <div className="flex justify-between items-center text-amber-600">
-                <span className="flex items-center gap-1"><Star size={14} /> Points</span>
-                <span>- Rs. {r(loyaltyDiscount)}</span>
-              </div>
-            )}
             <div className="flex justify-between items-center text-lg pt-2 border-t border-gray-200">
               <div>
                 <span className="font-bold text-gray-800">Net Payable</span>
@@ -788,85 +676,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
               <span className="font-bold text-2xl text-emerald-600">Rs. {r(finalTotal)}</span>
             </div>
           </div>
-
-          {/* Coupon Section */}
-          {!pendingSale && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-1"><Tag size={14} /> Coupon Code</label>
-              {appliedCoupon ? (
-                <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2">
-                  <div>
-                    <span className="font-bold text-green-700">{couponCode}</span>
-                    <span className="text-green-600 text-sm ml-2">-Rs. {r(couponDiscount)} off</span>
-                  </div>
-                  <button onClick={removeCoupon} className="text-red-400 hover:text-red-600"><X size={16} /></button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={couponCode}
-                    onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }}
-                    className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none uppercase"
-                    placeholder="Enter code"
-                  />
-                  <button
-                    onClick={handleApplyCoupon}
-                    disabled={applyingCoupon || !couponCode.trim()}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white rounded-lg font-medium text-sm"
-                  >
-                    {applyingCoupon ? '...' : 'Apply'}
-                  </button>
-                </div>
-              )}
-              {couponError && <p className="text-red-500 text-xs">{couponError}</p>}
-            </div>
-          )}
-
-          {/* Loyalty Points Section */}
-          {loyaltyInfo && !pendingSale && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-amber-800 flex items-center gap-1"><Star size={14} /> Loyalty Points</span>
-                <span className="font-bold text-amber-700">{loyaltyInfo.points} pts</span>
-              </div>
-              {loyaltyInfo.points >= (loyaltyInfo.config.min_redeem_points || 0) && loyaltyInfo.points > 0 && (
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 text-sm text-amber-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={redeemPoints}
-                      onChange={(e) => {
-                        setRedeemPoints(e.target.checked);
-                        if (!e.target.checked) setPointsToRedeem('');
-                      }}
-                      className="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-                    />
-                    Redeem
-                  </label>
-                  {redeemPoints && (
-                    <input
-                      type="number"
-                      value={pointsToRedeem}
-                      onChange={(e) => {
-                        const val = Math.min(parseInt(e.target.value) || 0, loyaltyInfo.points);
-                        setPointsToRedeem(val > 0 ? String(val) : '');
-                      }}
-                      max={loyaltyInfo.points}
-                      className="w-24 px-2 py-1 border border-amber-300 rounded text-right focus:ring-amber-500 outline-none text-sm"
-                      placeholder={`Max ${loyaltyInfo.points}`}
-                    />
-                  )}
-                  {redeemPoints && loyaltyDiscount > 0 && (
-                    <span className="text-xs text-amber-600">= Rs. {r(loyaltyDiscount)} off</span>
-                  )}
-                </div>
-              )}
-              {loyaltyInfo.points < (loyaltyInfo.config.min_redeem_points || 0) && (
-                <p className="text-xs text-amber-600">Min {loyaltyInfo.config.min_redeem_points} points to redeem</p>
-              )}
-            </div>
-          )}
 
           {/* Payment Method */}
           <div className="space-y-3">

@@ -92,9 +92,6 @@ const recipeRoutes          = require('./routes/recipeRoutes');
 const productionRoutes      = require('./routes/productionRoutes');
 const agentRoutes           = require('./routes/agentRoutes');
 const supportTicketRoutes   = require('./routes/supportTicketRoutes');
-const announcementRoutes    = require('./routes/announcementRoutes');
-const loyaltyRoutes         = require('./routes/loyaltyRoutes');
-const couponRoutes          = require('./routes/couponRoutes');
 const whatsappRoutes        = require('./routes/whatsappRoutes');
 const fbrRoutes             = require('./routes/fbrRoutes');
 
@@ -291,9 +288,6 @@ app.use('/api/inventory-reports',   inventoryReportRoutes);
 app.use('/api/agent', agentLimiter);
 app.use('/api/agent',               agentRoutes);
 app.use('/api/support-tickets',     supportTicketRoutes);
-app.use('/api/announcements',       announcementRoutes);
-app.use('/api/loyalty',             loyaltyRoutes);
-app.use('/api/coupons',             couponRoutes);
 app.use('/api/whatsapp',            whatsappRoutes);
 app.use('/api/fbr',                 fbrRoutes);
 
