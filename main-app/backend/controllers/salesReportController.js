@@ -16,7 +16,7 @@ exports.getSalesSummary = async (req, res) => {
         COALESCE(SUM(discount), 0) as total_discount,
         COALESCE(SUM(tax_amount), 0) as total_tax
       FROM sales
-      WHERE status = 'completed' AND DATE(sale_date) BETWEEN ? AND ?
+      WHERE status = 'completed' AND sale_date >= ? AND sale_date < DATE_ADD(?, INTERVAL 1 DAY)
     `, params);
 
     res.json({
@@ -32,13 +32,12 @@ exports.getSalesSummary = async (req, res) => {
 exports.getHourlySales = async (req, res) => {
   try {
     const date = req.query.date || new Date().toISOString().split('T')[0];
-    const params = [date];
 
     const rows = await query(`
       SELECT HOUR(sale_date) as hour, COUNT(*) as orders, COALESCE(SUM(net_amount), 0) as revenue
-      FROM sales WHERE status = 'completed' AND DATE(sale_date) = ?
+      FROM sales WHERE status = 'completed' AND sale_date >= ? AND sale_date < DATE_ADD(?, INTERVAL 1 DAY)
       GROUP BY HOUR(sale_date) ORDER BY hour
-    `, params);
+    `, [date, date]);
 
     const hourly = Array.from({ length: 24 }, (_, i) => {
       const found = rows.find(r => Number(r.hour) === i);
@@ -57,7 +56,7 @@ exports.getPaymentBreakdown = async (req, res) => {
 
     const rows = await query(`
       SELECT payment_method, COUNT(*) as count, COALESCE(SUM(net_amount), 0) as total
-      FROM sales WHERE status = 'completed' AND DATE(sale_date) BETWEEN ? AND ?
+      FROM sales WHERE status = 'completed' AND sale_date >= ? AND sale_date < DATE_ADD(?, INTERVAL 1 DAY)
       GROUP BY payment_method ORDER BY total DESC
     `, params);
 
@@ -78,7 +77,7 @@ exports.getCashierPerformance = async (req, res) => {
       SELECT s.user_id, u.name as cashier_name, COUNT(*) as order_count,
         COALESCE(SUM(s.net_amount), 0) as total_sales, COALESCE(AVG(s.net_amount), 0) as avg_sale
       FROM sales s JOIN users u ON s.user_id = u.user_id
-      WHERE s.status = 'completed' AND DATE(s.sale_date) BETWEEN ? AND ?
+      WHERE s.status = 'completed' AND s.sale_date >= ? AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY)
       GROUP BY s.user_id ORDER BY total_sales DESC
     `, params);
 
@@ -95,7 +94,7 @@ exports.getDailyTrend = async (req, res) => {
 
     const rows = await query(`
       SELECT DATE(sale_date) as date, COUNT(*) as orders, COALESCE(SUM(net_amount), 0) as revenue
-      FROM sales WHERE status = 'completed' AND DATE(sale_date) BETWEEN ? AND ?
+      FROM sales WHERE status = 'completed' AND sale_date >= ? AND sale_date < DATE_ADD(?, INTERVAL 1 DAY)
       GROUP BY DATE(sale_date) ORDER BY date
     `, params);
 
@@ -113,7 +112,7 @@ exports.getTopCustomers = async (req, res) => {
     const rows = await query(`
       SELECT s.customer_id, c.customer_name, COUNT(*) as order_count, COALESCE(SUM(s.net_amount), 0) as total_spent
       FROM sales s JOIN customers c ON s.customer_id = c.customer_id
-      WHERE s.status = 'completed' AND DATE(s.sale_date) BETWEEN ? AND ?
+      WHERE s.status = 'completed' AND s.sale_date >= ? AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY)
       GROUP BY s.customer_id ORDER BY total_spent DESC LIMIT 15
     `, params);
 
@@ -135,8 +134,8 @@ exports.getSalesComparison = async (req, res) => {
     const prevParams = ['completed', prevFrom, prevTo];
 
     const [[current], [previous]] = await Promise.all([
-      query(`SELECT COALESCE(SUM(net_amount), 0) as total, COUNT(*) as orders FROM sales WHERE status = ? AND DATE(sale_date) BETWEEN ? AND ?`, currentParams),
-      query(`SELECT COALESCE(SUM(net_amount), 0) as total, COUNT(*) as orders FROM sales WHERE status = ? AND DATE(sale_date) BETWEEN ? AND ?`, prevParams)
+      query(`SELECT COALESCE(SUM(net_amount), 0) as total, COUNT(*) as orders FROM sales WHERE status = ? AND sale_date >= ? AND sale_date < DATE_ADD(?, INTERVAL 1 DAY)`, currentParams),
+      query(`SELECT COALESCE(SUM(net_amount), 0) as total, COUNT(*) as orders FROM sales WHERE status = ? AND sale_date >= ? AND sale_date < DATE_ADD(?, INTERVAL 1 DAY)`, prevParams)
     ]);
 
     const currentTotal = Number(current.total);
@@ -163,7 +162,7 @@ exports.getProfitMargin = async (req, res) => {
       FROM sale_details sd
       JOIN sales s    ON sd.sale_id    = s.sale_id
       JOIN products p ON sd.product_id = p.product_id
-      WHERE s.status = 'completed' AND DATE(s.sale_date) BETWEEN ? AND ? AND p.cost_price IS NOT NULL
+      WHERE s.status = 'completed' AND s.sale_date >= ? AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY) AND p.cost_price IS NOT NULL
     `, params);
 
     const rows = await query(`
@@ -181,7 +180,7 @@ exports.getProfitMargin = async (req, res) => {
       JOIN sales s    ON sd.sale_id    = s.sale_id
       JOIN products p ON sd.product_id = p.product_id
       LEFT JOIN categories c ON p.category_id = c.category_id
-      WHERE s.status = 'completed' AND DATE(s.sale_date) BETWEEN ? AND ? AND p.cost_price IS NOT NULL
+      WHERE s.status = 'completed' AND s.sale_date >= ? AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY) AND p.cost_price IS NOT NULL
       GROUP BY p.product_id
       ORDER BY gross_profit DESC
     `, params);
@@ -226,7 +225,7 @@ exports.getDiscountAnalysis = async (req, res) => {
           THEN ROUND(SUM(s.discount) / SUM(s.total_amount) * 100, 1)
           ELSE 0 END                                                        as discount_pct
       FROM sales s
-      WHERE s.status = 'completed' AND DATE(s.sale_date) BETWEEN ? AND ?
+      WHERE s.status = 'completed' AND s.sale_date >= ? AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY)
     `, params);
 
     const bycashier = await query(`
@@ -241,7 +240,7 @@ exports.getDiscountAnalysis = async (req, res) => {
           ELSE 0 END                                                           as discount_pct
       FROM sales s
       JOIN users u ON s.user_id = u.user_id
-      WHERE s.status = 'completed' AND DATE(s.sale_date) BETWEEN ? AND ?
+      WHERE s.status = 'completed' AND s.sale_date >= ? AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY)
       GROUP BY s.user_id
       ORDER BY total_discount DESC
     `, params);
@@ -253,7 +252,7 @@ exports.getDiscountAnalysis = async (req, res) => {
         COALESCE(SUM(s.total_amount), 0)         as gross_sales,
         COUNT(CASE WHEN s.discount > 0 THEN 1 END) as discounted_orders
       FROM sales s
-      WHERE s.status = 'completed' AND DATE(s.sale_date) BETWEEN ? AND ?
+      WHERE s.status = 'completed' AND s.sale_date >= ? AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY)
       GROUP BY DATE(s.sale_date)
       ORDER BY date
     `, params);
@@ -303,7 +302,7 @@ exports.getTaxReport = async (req, res) => {
         COALESCE(SUM(CASE WHEN tax_amount > 0 THEN net_amount ELSE 0 END), 0) as taxable_sales,
         COALESCE(SUM(CASE WHEN tax_amount = 0 THEN net_amount ELSE 0 END), 0) as non_taxable_sales
       FROM sales
-      WHERE status = 'completed' AND DATE(sale_date) BETWEEN ? AND ?
+      WHERE status = 'completed' AND sale_date >= ? AND sale_date < DATE_ADD(?, INTERVAL 1 DAY)
     `, params);
 
     const daily = await query(`
@@ -314,7 +313,7 @@ exports.getTaxReport = async (req, res) => {
         COALESCE(SUM(tax_amount), 0)              as tax_collected,
         COALESCE(SUM(net_amount), 0)              as net_amount
       FROM sales
-      WHERE status = 'completed' AND DATE(sale_date) BETWEEN ? AND ?
+      WHERE status = 'completed' AND sale_date >= ? AND sale_date < DATE_ADD(?, INTERVAL 1 DAY)
       GROUP BY DATE(sale_date)
       ORDER BY date
     `, params);
@@ -412,7 +411,7 @@ exports.getShiftReport = async (req, res) => {
         COALESCE(SUM(discount),0)         as total_discount,
         COALESCE(SUM(tax_amount),0)       as total_tax
       FROM sales
-      WHERE status = 'completed' AND DATE(sale_date) BETWEEN ? AND ?
+      WHERE status = 'completed' AND sale_date >= ? AND sale_date < DATE_ADD(?, INTERVAL 1 DAY)
       GROUP BY shift_name
       ORDER BY MIN(HOUR(sale_date))
     `, params);
@@ -428,7 +427,7 @@ exports.getShiftReport = async (req, res) => {
         END AS shift,
         COALESCE(SUM(net_amount),0) as total_sales
       FROM sales
-      WHERE status = 'completed' AND DATE(sale_date) BETWEEN ? AND ?
+      WHERE status = 'completed' AND sale_date >= ? AND sale_date < DATE_ADD(?, INTERVAL 1 DAY)
       GROUP BY DATE(sale_date), shift
       ORDER BY date
     `, params);
@@ -465,7 +464,7 @@ exports.getVoidedSales = async (req, res) => {
         COALESCE(SUM(net_amount),0)          as total_voided_amount,
         COUNT(DISTINCT user_id)              as cashiers_involved
       FROM sales
-      WHERE status != 'completed' AND DATE(sale_date) BETWEEN ? AND ?
+      WHERE status != 'completed' AND sale_date >= ? AND sale_date < DATE_ADD(?, INTERVAL 1 DAY)
     `, params);
 
     const data = await query(`
@@ -474,7 +473,7 @@ exports.getVoidedSales = async (req, res) => {
         s.payment_method, s.note, u.name as cashier_name
       FROM sales s
       JOIN users u ON s.user_id = u.user_id
-      WHERE s.status != 'completed' AND DATE(s.sale_date) BETWEEN ? AND ?
+      WHERE s.status != 'completed' AND s.sale_date >= ? AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY)
       ORDER BY s.sale_date DESC
     `, params);
 
@@ -514,7 +513,7 @@ exports.getProductPerformance = async (req, res) => {
         COUNT(DISTINCT sd.product_id) as unique_products
       FROM sale_details sd
       JOIN sales s ON sd.sale_id = s.sale_id
-      WHERE s.status = 'completed' AND DATE(s.sale_date) BETWEEN ? AND ?
+      WHERE s.status = 'completed' AND s.sale_date >= ? AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY)
     `, params);
 
     const data = await query(`
@@ -528,7 +527,7 @@ exports.getProductPerformance = async (req, res) => {
       JOIN sales s ON sd.sale_id = s.sale_id
       JOIN products p ON sd.product_id = p.product_id
       LEFT JOIN categories c ON p.category_id = c.category_id
-      WHERE s.status = 'completed' AND DATE(s.sale_date) BETWEEN ? AND ?
+      WHERE s.status = 'completed' AND s.sale_date >= ? AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY)
       GROUP BY p.product_id
       ORDER BY ${sortCol} DESC
       LIMIT 50
@@ -567,7 +566,7 @@ exports.getCustomerHistory = async (req, res) => {
         COALESCE(SUM(s.net_amount),0) as total_revenue,
         COALESCE(AVG(s.net_amount),0) as avg_order_value
       FROM sales s
-      WHERE s.status = 'completed' AND DATE(s.sale_date) BETWEEN ? AND ?
+      WHERE s.status = 'completed' AND s.sale_date >= ? AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY)
         AND s.customer_id != 1
     `, params);
 
@@ -580,7 +579,7 @@ exports.getCustomerHistory = async (req, res) => {
         MIN(s.sale_date)              as first_visit
       FROM sales s
       JOIN customers c ON s.customer_id = c.customer_id
-      WHERE s.status = 'completed' AND DATE(s.sale_date) BETWEEN ? AND ?
+      WHERE s.status = 'completed' AND s.sale_date >= ? AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY)
         AND s.customer_id != 1
       GROUP BY c.customer_id
       ORDER BY total_spent DESC
@@ -753,7 +752,7 @@ exports.getCategoryBreakdown = async (req, res) => {
         COALESCE(SUM(additional_charges_amount), 0) as total_charges,
         COALESCE(AVG(net_amount), 0) as avg_order
       FROM sales
-      WHERE status = 'completed' AND DATE(sale_date) BETWEEN ? AND ?
+      WHERE status = 'completed' AND sale_date >= ? AND sale_date < DATE_ADD(?, INTERVAL 1 DAY)
       GROUP BY order_type
       ORDER BY total_sales DESC
     `, params);

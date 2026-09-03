@@ -782,6 +782,7 @@ exports.getToday = async (req, res) => {
       WHERE s.sale_date >= ? AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY)
         AND (s.status = 'completed' OR s.status = 'refunded')
       ORDER BY s.sale_date DESC
+      LIMIT 200
     `, [today, today]);
     res.json(sales);
   } catch (error) {

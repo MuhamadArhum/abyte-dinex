@@ -542,6 +542,37 @@ const MIGRATIONS = [
       await queryDb(db, `ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS actual_delivery DATETIME NULL`);
     },
   },
+  {
+    version: 24,
+    name: 'add_performance_indexes',
+    async run(db) {
+      const idxs = [
+        // sales — most queried table; user_id/customer_id used in joins and filters
+        `ALTER TABLE sales ADD INDEX IF NOT EXISTS idx_sale_user (user_id)`,
+        `ALTER TABLE sales ADD INDEX IF NOT EXISTS idx_sale_customer (customer_id)`,
+        // credit_payments — joined on every credit aging query
+        `ALTER TABLE credit_payments ADD INDEX IF NOT EXISTS idx_cp_credit_sale (credit_sale_id)`,
+        // stock_issue_items — joined in items ledger and issuance reports
+        `ALTER TABLE stock_issue_items ADD INDEX IF NOT EXISTS idx_sii_issue (issue_id)`,
+        `ALTER TABLE stock_issue_items ADD INDEX IF NOT EXISTS idx_sii_product (product_id)`,
+        // stock_issue_return_items — joined in items ledger
+        `ALTER TABLE stock_issue_return_items ADD INDEX IF NOT EXISTS idx_siri_return (return_id)`,
+        // raw_sale_items — joined in items ledger
+        `ALTER TABLE raw_sale_items ADD INDEX IF NOT EXISTS idx_rsi_sale (sale_id)`,
+        // inv_purchase_voucher_items — joined in items ledger and stock reconciliation
+        `ALTER TABLE inv_purchase_voucher_items ADD INDEX IF NOT EXISTS idx_pvi_product (product_id)`,
+        // purchase_return_items — joined in returns report and items ledger
+        `ALTER TABLE purchase_return_items ADD INDEX IF NOT EXISTS idx_pri_product (product_id)`,
+        // cash_movements — joined in register close and reconciliation
+        `ALTER TABLE cash_movements ADD INDEX IF NOT EXISTS idx_cm_register (register_id)`,
+        // print_queue — polled every few seconds
+        `ALTER TABLE print_queue ADD INDEX IF NOT EXISTS idx_pq_status (status)`,
+      ];
+      for (const stmt of idxs) {
+        try { await queryDb(db, stmt); } catch (_e) { /* index may already exist */ }
+      }
+    },
+  },
 ];
 
 async function ensureMigrationsTable(db) {

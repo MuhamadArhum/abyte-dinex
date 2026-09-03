@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import api from '../utils/api';
 
 const AGENT_URL     = 'http://localhost:3001';
-const POLL_MS       = 5000;   // poll backend every 5s
+const POLL_MS       = 15000;  // poll backend every 15s
 const AGENT_CHECK_MS = 15000; // re-check agent liveness every 15s
 
 async function isAgentAlive(): Promise<boolean> {
