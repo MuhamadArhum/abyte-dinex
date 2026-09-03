@@ -586,6 +586,10 @@ exports.testPrinter = async (req, res) => {
 
     if (printer_type === 'usb') {
       if (!printer_name) return res.status(400).json({ message: 'Printer name is required' });
+      // Allowlist: letters, digits, spaces, backslash (UNC paths), dot, hyphen, underscore
+      if (!/^[\w\s\\.\-]+$/.test(printer_name)) {
+        return res.status(400).json({ message: 'Invalid printer name' });
+      }
       const ESC = '\x1B';
       const GS = '\x1D';
       const testData = Buffer.from(

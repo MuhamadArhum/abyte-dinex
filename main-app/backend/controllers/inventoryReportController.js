@@ -97,12 +97,17 @@ exports.itemsLedger = async (req, res) => {
   try {
     const { product_id, from_date, to_date } = req.query;
     if (!product_id) return res.status(400).json({ message: 'product_id is required' });
+
+    // Build parameterized date clauses — never string-concatenate user input into SQL
     const dw = (col) => {
-      let w = '';
-      if (from_date) w += ' AND ' + col + " >= '" + from_date + "'";
-      if (to_date)   w += ' AND ' + col + " <= '" + to_date + "'";
-      return w;
+      const clauses = [];
+      const params = [];
+      if (from_date) { clauses.push(`${col} >= ?`); params.push(from_date); }
+      if (to_date)   { clauses.push(`${col} <= ?`); params.push(to_date); }
+      return { sql: clauses.length ? ' AND ' + clauses.join(' AND ') : '', params };
     };
+
+    const d1 = dw('pv.voucher_date');
     const purchases = await query(
       'SELECT pvi.pv_id as ref_id, pv.pv_number as ref_number, pv.voucher_date as txn_date,' +
       " 'Purchase' as txn_type, 'IN' as direction," +
@@ -112,7 +117,9 @@ exports.itemsLedger = async (req, res) => {
       ' FROM inv_purchase_voucher_items pvi' +
       ' JOIN inv_purchase_vouchers pv ON pvi.pv_id = pv.pv_id' +
       ' LEFT JOIN suppliers s ON pv.supplier_id = s.supplier_id' +
-      ' WHERE pvi.product_id = ?' + dw('pv.voucher_date'), [product_id]);
+      ' WHERE pvi.product_id = ?' + d1.sql, [product_id, ...d1.params]);
+
+    const d2 = dw('pr.return_date');
     const purchaseReturns = await query(
       'SELECT pri.pr_id as ref_id, pr.pr_number as ref_number, pr.return_date as txn_date,' +
       " 'Purchase Return' as txn_type, 'OUT' as direction," +
@@ -122,7 +129,9 @@ exports.itemsLedger = async (req, res) => {
       ' FROM purchase_return_items pri' +
       ' JOIN purchase_returns pr ON pri.pr_id = pr.pr_id' +
       ' LEFT JOIN suppliers s ON pr.supplier_id = s.supplier_id' +
-      ' WHERE pri.product_id = ?' + dw('pr.return_date'), [product_id]);
+      ' WHERE pri.product_id = ?' + d2.sql, [product_id, ...d2.params]);
+
+    const d3 = dw('si.issue_date');
     const issues = await query(
       'SELECT sii.issue_id as ref_id, si.issue_number as ref_number, si.issue_date as txn_date,' +
       " 'Stock Issue' as txn_type, 'OUT' as direction," +
@@ -132,7 +141,9 @@ exports.itemsLedger = async (req, res) => {
       ' FROM stock_issue_items sii' +
       ' JOIN stock_issues si ON sii.issue_id = si.issue_id' +
       ' JOIN sections sec ON si.section_id = sec.section_id' +
-      ' WHERE sii.product_id = ?' + dw('si.issue_date'), [product_id]);
+      ' WHERE sii.product_id = ?' + d3.sql, [product_id, ...d3.params]);
+
+    const d4 = dw('sr.return_date');
     const stockReturns = await query(
       'SELECT sri.return_id as ref_id, sr.return_number as ref_number, sr.return_date as txn_date,' +
       " 'Stock Return' as txn_type, 'IN' as direction," +
@@ -141,7 +152,9 @@ exports.itemsLedger = async (req, res) => {
       ' FROM stock_issue_return_items sri' +
       ' JOIN stock_issue_returns sr ON sri.return_id = sr.return_id' +
       ' JOIN sections sec ON sr.section_id = sec.section_id' +
-      ' WHERE sri.product_id = ?' + dw('sr.return_date'), [product_id]);
+      ' WHERE sri.product_id = ?' + d4.sql, [product_id, ...d4.params]);
+
+    const d5 = dw('rs.sale_date');
     const rawSales = await query(
       'SELECT rsi.sale_id as ref_id, rs.sale_number as ref_number, rs.sale_date as txn_date,' +
       " 'Raw Sale' as txn_type, 'OUT' as direction," +
@@ -151,7 +164,7 @@ exports.itemsLedger = async (req, res) => {
       ' FROM raw_sale_items rsi' +
       ' JOIN raw_sales rs ON rsi.sale_id = rs.sale_id' +
       ' JOIN sections sec ON rs.section_id = sec.section_id' +
-      ' WHERE rsi.product_id = ?' + dw('rs.sale_date'), [product_id]);
+      ' WHERE rsi.product_id = ?' + d5.sql, [product_id, ...d5.params]);
     const all = [...purchases, ...purchaseReturns, ...issues, ...stockReturns, ...rawSales]
       .sort((a, b) => new Date(a.txn_date) - new Date(b.txn_date) || Number(a.ref_id) - Number(b.ref_id));
     let balance = 0;
