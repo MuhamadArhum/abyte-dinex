@@ -39,7 +39,7 @@ async function safeQuery(db, sql, params) {
 
 async function main() {
   console.log(`\n${c.bold}${c.cyan}═══════════════════════════════════════════════════════════════════${c.reset}`);
-  console.log(`${c.bold}  Abyte ERP — Live Database Status${c.reset}`);
+  console.log(`${c.bold}  Abyte Dinex — Live Database Status${c.reset}`);
   console.log(`${c.cyan}═══════════════════════════════════════════════════════════════════${c.reset}\n`);
 
   // Get all tenants

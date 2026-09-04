@@ -35,7 +35,7 @@ export default function NotFound() {
           <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
             <span className="text-base font-black text-white">A</span>
           </div>
-          <span className="text-gray-700 font-bold text-base">AByte <span className="text-emerald-600">ERP</span></span>
+          <span className="text-gray-700 font-bold text-base">Abyte <span className="text-emerald-600">Dinex</span></span>
         </motion.div>
 
         {/* 404 Display */}
@@ -96,7 +96,7 @@ export default function NotFound() {
           </div>
         </motion.div>
 
-        <p className="text-xs text-gray-300 mt-10">AByte ERP © 2025</p>
+        <p className="text-xs text-gray-300 mt-10">Abyte Dinex © 2025</p>
       </div>
     </div>
   );

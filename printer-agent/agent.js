@@ -1,6 +1,6 @@
 // =============================================================
-// Abyte ERP Printer Agent v3.0
-// Runs on cashier PC — bridges Abyte ERP web app to local printers
+// Abyte Dinex Printer Agent v3.0
+// Runs on cashier PC — bridges Abyte Dinex web app to local printers
 //
 // Supports multiple printers per PC:
 //   - Invoice printers  (receipts, invoices)
@@ -318,7 +318,7 @@ function buildUI() {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Abyte ERP Printer Agent</title>
+<title>Abyte Dinex Printer Agent</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -474,7 +474,7 @@ function buildUI() {
 <div class="header">
   <div class="header-logo">A</div>
   <div>
-    <div class="header-title">Abyte ERP Printer Agent</div>
+    <div class="header-title">Abyte Dinex Printer Agent</div>
     <div class="header-sub">Local thermal printer bridge — port 3001</div>
   </div>
   <div class="header-right">
@@ -507,7 +507,7 @@ function buildUI() {
         <div class="form-group">
           <label class="form-label">Server URL</label>
           <input class="form-input" id="sc-url" placeholder="https://erp.abytesol.com">
-          <div class="form-hint">Base URL of your AByte backend</div>
+          <div class="form-hint">Base URL of your Abyte Dinex backend</div>
         </div>
         <div class="form-group">
           <label class="form-label">Tenant Code</label>
@@ -1131,7 +1131,7 @@ app.post('/printers/:id/test', async (req, res) => {
   try {
     const buf = printer.type === 'kot'
       ? buildKOTESCPOS({ tokenNo: 'TEST-001', date: new Date().toLocaleString(), cashierName: 'System', categoryName: printer.is_master ? 'XPR / All Items' : 'Section Test', items: [{ name: 'Chicken Burger', quantity: 2 }, { name: 'French Fries', quantity: 1 }] }, printer)
-      : buildInvoiceESCPOS({ storeName: 'Abyte ERP', storeAddress: 'Test Print', saleId: 1, invoiceNo: 'TEST-001', date: new Date().toLocaleString(), cashierName: 'System', currencySymbol: 'Rs.', items: [{ name: 'Test Item', quantity: 1, price: 100 }], subtotal: 100, totalAmount: 100, amountPaid: 100, changeDue: 0, footer: '** Printer is working! **' }, printer);
+      : buildInvoiceESCPOS({ storeName: 'Abyte Dinex', storeAddress: 'Test Print', saleId: 1, invoiceNo: 'TEST-001', date: new Date().toLocaleString(), cashierName: 'System', currencySymbol: 'Rs.', items: [{ name: 'Test Item', quantity: 1, price: 100 }], subtotal: 100, totalAmount: 100, amountPaid: 100, changeDue: 0, footer: '** Printer is working! **' }, printer);
 
     await sendToPrinter(printer, buf);
     const ms = Date.now() - t0;
@@ -1275,7 +1275,7 @@ app.post('/print/kot', async (req, res) => {
 });
 
 // ── Backend Polling ───────────────────────────────────────────
-// Polls the Abyte ERP backend print queue directly so jobs from the
+// Polls the Abyte Dinex backend print queue directly so jobs from the
 // mobile app are processed even when no browser tab is open.
 
 function backendRequest(url, options = {}, body = null) {
@@ -1363,7 +1363,7 @@ function startPolling() {
 const server = app.listen(PORT, '0.0.0.0', () => {
   const printers = getPrinters();
   console.log(`\n========================================`);
-  console.log(`  Abyte ERP Printer Agent v${VERSION}`);
+  console.log(`  Abyte Dinex Printer Agent v${VERSION}`);
   console.log(`========================================`);
   console.log(`  URL     : http://localhost:${PORT}`);
   console.log(`  Config  : ${CONFIG_FILE}`);

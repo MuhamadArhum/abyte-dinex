@@ -59,7 +59,7 @@ export default function PWAInstallPrompt() {
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 text-sm">Abyte ERP Install Karein</p>
+          <p className="font-semibold text-gray-900 text-sm">Abyte Dinex Install Karein</p>
           {showIOSGuide ? (
             <p className="text-xs text-gray-500 mt-1 leading-relaxed">
               Safari mein <strong>Share</strong> button dabayein → <strong>"Add to Home Screen"</strong> select karein

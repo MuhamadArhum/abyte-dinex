@@ -395,10 +395,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               className="flex items-center gap-3 overflow-hidden whitespace-nowrap"
             >
               <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shadow-lg shadow-emerald-900/50 flex-shrink-0 bg-white">
-                <img src="/logo.png" alt="AByte" className="w-full h-full object-contain" />
+                <img src="/logo.png" alt="Abyte Dinex" className="w-full h-full object-contain" />
               </div>
               <div>
-                <p className="text-white font-bold text-base leading-tight">AByte <span className="text-emerald-400">ERP</span></p>
+                <p className="text-white font-bold text-base leading-tight">Abyte <span className="text-emerald-400">Dinex</span></p>
                 <p className="text-[10px] text-slate-500 font-medium">Business Solution</p>
               </div>
             </motion.div>
@@ -406,7 +406,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           {isCollapsed && (
             <div className="w-full flex justify-center">
               <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shadow-lg shadow-emerald-900/50 bg-white">
-                <img src="/logo.png" alt="AByte" className="w-full h-full object-contain" />
+                <img src="/logo.png" alt="Abyte Dinex" className="w-full h-full object-contain" />
               </div>
             </div>
           )}
@@ -466,7 +466,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 <span>Sign Out</span>
               </button>
             </div>
-            <p className="text-[10px] text-slate-700 text-center mt-3">AByte ERP v1.0 &copy; 2025</p>
+            <p className="text-[10px] text-slate-700 text-center mt-3">Abyte Dinex v1.0 &copy; 2025</p>
           </div>
         )}
       </aside>
@@ -487,10 +487,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             {/* Mobile logo */}
             <div className="md:hidden flex items-center gap-2 min-w-0">
               <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0 bg-white shadow">
-                <img src="/logo.png" alt="AByte" className="w-full h-full object-contain" />
+                <img src="/logo.png" alt="Abyte Dinex" className="w-full h-full object-contain" />
               </div>
               <span className="text-sm font-bold text-gray-800 truncate max-w-[120px]">
-                {filteredMenu.flatMap(m => [m, ...(m.children || [])]).find(m => m.path === location.pathname)?.label || 'AByte ERP'}
+                {filteredMenu.flatMap(m => [m, ...(m.children || [])]).find(m => m.path === location.pathname)?.label || 'Abyte Dinex'}
               </span>
             </div>
 
@@ -499,7 +499,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <h1 className="text-base font-bold text-gray-900 leading-tight">
                 {filteredMenu.flatMap(m => [m, ...(m.children || [])]).find(m => m.path === location.pathname)?.label || 'Dashboard'}
               </h1>
-              <p className="text-xs text-gray-400">AByte ERP &mdash; Complete Business Management</p>
+              <p className="text-xs text-gray-400">Abyte Dinex &mdash; Complete Business Management</p>
             </div>
           </div>
 
@@ -666,10 +666,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               {/* Logo */}
               <div className="h-16 flex items-center gap-3 px-4 border-b border-white/8">
                 <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shadow-lg flex-shrink-0 bg-white">
-                  <img src="/logo.png" alt="AByte" className="w-full h-full object-contain" />
+                  <img src="/logo.png" alt="Abyte Dinex" className="w-full h-full object-contain" />
                 </div>
                 <div>
-                  <p className="text-white font-bold text-base leading-tight">AByte <span className="text-emerald-400">ERP</span></p>
+                  <p className="text-white font-bold text-base leading-tight">Abyte <span className="text-emerald-400">Dinex</span></p>
                   <p className="text-[10px] text-slate-500 font-medium">Business Solution</p>
                 </div>
                 <button

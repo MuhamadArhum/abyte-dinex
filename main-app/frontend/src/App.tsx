@@ -101,7 +101,7 @@ const LogoLoader = ({ fullScreen = false }: { fullScreen?: boolean }) => (
     <div className="relative">
       <img
         src="/logo.png"
-        alt="AByte"
+        alt="Abyte Dinex"
         className="w-16 h-16 object-contain animate-pulse"
       />
       <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex gap-1">

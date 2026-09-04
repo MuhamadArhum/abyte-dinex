@@ -198,7 +198,7 @@ const Dashboard = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.35 }}>
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Abyte ERP Dashboard Overview</h1>
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Abyte Dinex Dashboard Overview</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Welcome back! Dear <span className="font-bold text-emerald-600">{user?.name}</span>. Here's what's happening today.
           </p>

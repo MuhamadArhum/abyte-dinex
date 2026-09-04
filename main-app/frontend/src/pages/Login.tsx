@@ -87,10 +87,10 @@ const Login = () => {
           className="relative z-10 flex items-center gap-3"
         >
           <div className="w-11 h-11 rounded-xl overflow-hidden flex items-center justify-center shadow-lg shadow-emerald-500/30 bg-white">
-            <img src="/logo.png" alt="AByte" className="w-full h-full object-contain" />
+            <img src="/logo.png" alt="Abyte Dinex" className="w-full h-full object-contain" />
           </div>
           <div>
-            <p className="text-white font-bold text-lg leading-tight">AByte ERP</p>
+            <p className="text-white font-bold text-lg leading-tight">Abyte Dinex</p>
             <p className="text-emerald-400/70 text-xs">Complete Business Solution</p>
           </div>
         </motion.div>
@@ -170,7 +170,7 @@ const Login = () => {
             <Shield size={14} className="text-emerald-500/60" />
             <span className="text-slate-500 text-xs">Secure & Encrypted</span>
           </div>
-          <span className="text-slate-600 text-xs">v1.0.0 &copy; 2025 AByte</span>
+          <span className="text-slate-600 text-xs">v1.0.0 &copy; 2025 Abyte Dinex</span>
         </motion.div>
       </div>
 
@@ -197,7 +197,7 @@ const Login = () => {
             <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
               <span className="text-lg font-black text-white">A</span>
             </div>
-            <span className="text-xl font-bold text-gray-800">AByte ERP</span>
+            <span className="text-xl font-bold text-gray-800">Abyte Dinex</span>
           </div>
 
           {/* Heading */}
@@ -315,7 +315,7 @@ const Login = () => {
           </div>{/* end card */}
 
           <p className="text-center text-xs text-gray-400 mt-4">
-            AByte ERP &copy; 2025 &nbsp;&middot;&nbsp; All rights reserved
+            Abyte Dinex &copy; 2025 &nbsp;&middot;&nbsp; All rights reserved
           </p>
         </motion.div>
       </div>

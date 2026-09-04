@@ -107,7 +107,7 @@ const EmailSettings = () => {
 EMAIL_PORT=587
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASS=your-app-password
-EMAIL_FROM="AByte ERP <noreply@yourstore.com>"
+EMAIL_FROM="Abyte Dinex <noreply@yourstore.com>"
 BACKUP_NOTIFY_EMAIL=admin@yourstore.com`}
             </code>
             <p className="text-gray-600 mt-3">3. For Gmail, use an App Password (not your account password). Enable 2FA first, then go to Google Account → Security → App Passwords.</p>

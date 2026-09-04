@@ -59,7 +59,7 @@ export async function printToThermalPrinter(
   const amountPaid    = parseNumber(sale.amount_paid);
 
   const receiptData = {
-    storeName:      settings?.store_name || 'AByte ERP',
+    storeName:      settings?.store_name || 'Abyte Dinex',
     storeAddress:   settings?.address || '',
     storePhone:     settings?.phone || '',
     saleId:         sale.sale_id,
@@ -117,7 +117,7 @@ export async function printBillWithTax(
   const billLabel    = taxType === 'cash' ? 'CASH BILL' : taxType === 'card' ? 'CARD BILL' : 'ONLINE BILL';
 
   const receiptData = {
-    storeName:      settings?.store_name || 'AByte ERP',
+    storeName:      settings?.store_name || 'Abyte Dinex',
     storeAddress:   settings?.address || '',
     storePhone:     settings?.phone || '',
     saleId:         sale.sale_id,

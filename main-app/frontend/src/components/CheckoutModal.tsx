@@ -306,7 +306,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
       : null;
 
     const invoiceData = {
-      storeName:      settings?.store_name || 'AByte ERP',
+      storeName:      settings?.store_name || 'Abyte Dinex',
       storeAddress:   settings?.address    || '',
       storePhone:     settings?.phone      || '',
       ...(logoEscPosData ? { logoEscPosData } : {}),

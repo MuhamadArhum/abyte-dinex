@@ -23,7 +23,7 @@ function logoUrl(settings?: StoreSettings): string | undefined {
 
 function storeBase(settings?: StoreSettings) {
   return {
-    storeName:      settings?.store_name      || 'AByte ERP',
+    storeName:      settings?.store_name      || 'Abyte Dinex',
     storeAddress:   settings?.address         || undefined,
     storePhone:     settings?.phone           || undefined,
     logoUrl:        logoUrl(settings),

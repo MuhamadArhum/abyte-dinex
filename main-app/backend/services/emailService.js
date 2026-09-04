@@ -102,7 +102,7 @@ exports.sendLowStockAlert = async ({ to, products }) => {
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
-          <p style="color:#9ca3af;font-size:12px;margin-top:16px">AByte ERP — Automated Alert</p>
+          <p style="color:#9ca3af;font-size:12px;margin-top:16px">Abyte Dinex — Automated Alert</p>
         </div>
       </div>`,
     text: `Low Stock Alert\n\n${products.map(p => `${p.product_name}: ${p.available_stock} units`).join('\n')}`,
@@ -144,7 +144,7 @@ exports.sendBackupNotification = async ({ to, filename, status, error }) => {
             ? `<p>Database backup created successfully.</p><p><strong>File:</strong> ${filename}</p>`
             : `<p>Backup failed with error:</p><pre style="background:#fee2e2;padding:12px;border-radius:4px">${error}</pre>`
           }
-          <p style="color:#9ca3af;font-size:12px">AByte ERP — Automated Backup</p>
+          <p style="color:#9ca3af;font-size:12px">Abyte Dinex — Automated Backup</p>
         </div>
       </div>`,
     text: success ? `Backup created: ${filename}` : `Backup failed: ${error}`,
@@ -154,14 +154,14 @@ exports.sendBackupNotification = async ({ to, filename, status, error }) => {
 exports.sendLoginAlert = async ({ to, name, ip, time }) => {
   return sendMail({
     to,
-    subject: '🔐 New Login to AByte ERP',
+    subject: '🔐 New Login to Abyte Dinex',
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
         <div style="background:#3b82f6;padding:20px;border-radius:8px 8px 0 0">
           <h2 style="color:white;margin:0">Login Detected</h2>
         </div>
         <div style="background:#f9fafb;padding:20px">
-          <p>User <strong>${name}</strong> logged in to AByte ERP.</p>
+          <p>User <strong>${name}</strong> logged in to Abyte Dinex.</p>
           <p><strong>IP:</strong> ${ip || 'Unknown'}</p>
           <p><strong>Time:</strong> ${time || new Date().toLocaleString()}</p>
           <p style="color:#9ca3af;font-size:12px">If this was not you, please change your password immediately.</p>
@@ -202,7 +202,7 @@ exports.sendInvoiceEmail = async ({ to, sale, storeSettings = {} }) => {
       <td style="padding:4px 12px;text-align:right;color:${r.color || '#374151'}">${r.value}</td>
     </tr>`).join('');
 
-  const storeName    = storeSettings.store_name    || storeSettings.company_name || 'AByte ERP';
+  const storeName    = storeSettings.store_name    || storeSettings.company_name || 'Abyte Dinex';
   const storeAddress = storeSettings.address       || '';
   const storePhone   = storeSettings.phone         || '';
   const footerText   = storeSettings.receipt_footer || 'Thank you for your business!';
@@ -277,7 +277,7 @@ exports.sendInvoiceEmail = async ({ to, sale, storeSettings = {} }) => {
     <!-- Footer -->
     <div style="background:#f9fafb;padding:20px 32px;text-align:center;border-top:1px solid #f0f0f0">
       <p style="margin:0;color:#6b7280;font-size:13px">${footerText}</p>
-      <p style="margin:8px 0 0;color:#d1d5db;font-size:11px">Powered by AByte ERP</p>
+      <p style="margin:8px 0 0;color:#d1d5db;font-size:11px">Powered by Abyte Dinex</p>
     </div>
   </div>
 </body>
@@ -294,12 +294,12 @@ exports.sendInvoiceEmail = async ({ to, sale, storeSettings = {} }) => {
 exports.sendPasswordReset = async ({ to, name, resetLink, companyName }) => {
   return sendMail({
     to,
-    subject: `Password Reset — AByte ERP`,
+    subject: `Password Reset — Abyte Dinex`,
     html: `
       <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
         <div style="background:linear-gradient(135deg,#0f172a,#064e3b);padding:28px 32px;text-align:center">
-          <img src="https://erp.abytesol.com/logo.png" alt="AByte ERP" style="width:56px;height:56px;object-fit:contain;background:#fff;border-radius:12px;padding:4px;margin-bottom:12px" />
-          <h1 style="color:#10b981;margin:0;font-size:22px;font-weight:800;letter-spacing:-0.5px">AByte ERP</h1>
+          <img src="https://erp.abytesol.com/logo.png" alt="Abyte Dinex" style="width:56px;height:56px;object-fit:contain;background:#fff;border-radius:12px;padding:4px;margin-bottom:12px" />
+          <h1 style="color:#10b981;margin:0;font-size:22px;font-weight:800;letter-spacing:-0.5px">Abyte Dinex</h1>
           <p style="color:#94a3b8;margin:4px 0 0;font-size:13px">Password Reset Request</p>
         </div>
         <div style="padding:32px">
@@ -323,7 +323,7 @@ exports.sendPasswordReset = async ({ to, name, resetLink, companyName }) => {
           </p>
         </div>
         <div style="background:#f8fafc;padding:16px 32px;text-align:center">
-          <p style="color:#94a3b8;font-size:11px;margin:0">AByte ERP &nbsp;|&nbsp; Powered by AbyteSol</p>
+          <p style="color:#94a3b8;font-size:11px;margin:0">Abyte Dinex &nbsp;|&nbsp; Powered by AbyteSol</p>
         </div>
       </div>`,
     text: `Hi ${name || 'User'},\n\nReset your password:\n${resetLink}\n\nExpires in 1 hour. If you didn't request this, ignore this email.\n\nPowered by AbyteSol`,

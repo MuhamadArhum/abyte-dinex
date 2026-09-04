@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AByte ERP is a multi-tenant SaaS Point-of-Sale / ERP system. It has three deployable apps:
+Abyte Dinex is a multi-tenant SaaS Point-of-Sale / ERP system. It has three deployable apps:
 
 | App | Path | Port | Stack |
 |-----|------|------|-------|

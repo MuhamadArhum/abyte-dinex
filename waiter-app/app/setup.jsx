@@ -34,7 +34,7 @@ export default function SetupScreen() {
     try {
       const parsed = JSON.parse(data);
       if (parsed?.app !== 'abyte-waiter' || !parsed?.url) {
-        Alert.alert('Invalid QR', 'This QR code is not from an AByte ERP system.', [
+        Alert.alert('Invalid QR', 'This QR code is not from an Abyte Dinex system.', [
           { text: 'Try Again', onPress: () => setScanned(false) },
         ]);
         return;
@@ -197,7 +197,7 @@ export default function SetupScreen() {
         <View style={styles.headerIcon}>
           <Ionicons name="restaurant" size={32} color="#fff" />
         </View>
-        <Text style={styles.headerTitle}>AByte Waiter</Text>
+        <Text style={styles.headerTitle}>Abyte Dinex</Text>
         <Text style={styles.headerSub}>Connect to your POS Server</Text>
       </View>
 

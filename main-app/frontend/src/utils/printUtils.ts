@@ -56,7 +56,7 @@ const openPrintWindowAsync = async (buildHtml: (settings: Awaited<ReturnType<typ
 };
 
 const getCompanyName = () => {
-  try { return localStorage.getItem('company_name') || 'AByte Manufacturing'; } catch { return 'AByte Manufacturing'; }
+  try { return localStorage.getItem('company_name') || 'Abyte Dinex'; } catch { return 'Abyte Dinex'; }
 };
 
 const fmt3 = (n: any) => Number(n || 0).toFixed(3);

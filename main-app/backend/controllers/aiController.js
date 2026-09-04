@@ -225,7 +225,7 @@ async function getSystemContext(tenantDb) {
       : 'No register data';
 
     const contextStr = `
-=== AByte ERP — COMPLETE LIVE BUSINESS DATA ===
+=== Abyte Dinex — COMPLETE LIVE BUSINESS DATA ===
 Date: ${new Date().toLocaleDateString('en-PK',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
 Time: ${new Date().toLocaleTimeString('en-PK')}
 
@@ -329,7 +329,7 @@ ${usersList.map(u=>`• ${u.name} | ${u.email} | ${u.role_name}`).join('\n')||'�
 
   } catch (error) {
     logger.error('AI context build error', { error: error.message });
-    return `=== AByte ERP — PARTIAL DATA ===\nDate: ${new Date().toLocaleDateString()}\nError loading business data\n===`;
+    return `=== Abyte Dinex — PARTIAL DATA ===\nDate: ${new Date().toLocaleDateString()}\nError loading business data\n===`;
   }
 }
 
@@ -355,7 +355,7 @@ exports.chat = async (req, res) => {
     const messages = [
       {
         role: "system",
-        content: `You are an AI Business Assistant for AByte ERP system.
+        content: `You are an AI Business Assistant for Abyte Dinex system.
 You have COMPLETE real-time access to ALL business modules: Sales, Inventory, Customers, and System.
 
 ${systemContext}

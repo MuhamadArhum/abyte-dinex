@@ -69,7 +69,7 @@ const SalarySlipModal = ({ isOpen, onClose, payment }: SalarySlipModalProps) => 
         <div id="salary-slip-content" className="p-8">
           {/* Header */}
           <div className="text-center mb-8 border-b-2 border-gray-300 pb-6">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">{settings?.store_name || 'AByte ERP Store'}</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">{settings?.store_name || 'Abyte Dinex Store'}</h1>
             {settings?.address && <p className="text-gray-600">{settings.address}</p>}
             {settings?.phone && <p className="text-gray-600">Phone: {settings.phone}</p>}
             {settings?.email && <p className="text-gray-600">Email: {settings.email}</p>}

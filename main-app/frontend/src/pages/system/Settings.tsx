@@ -1170,7 +1170,7 @@ const Settings = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-bold text-gray-800">Abyte ERP Printer Agent</p>
+                      <p className="font-bold text-gray-800">Abyte Dinex Printer Agent</p>
                       <code className="px-2 py-0.5 bg-white border border-gray-200 text-gray-600 text-xs rounded-md">{AGENT_URL.replace('http://', '')}</code>
                       {agentStatus === 'available'   && <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">● RUNNING</span>}
                       {agentStatus === 'unavailable' && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">○ NOT RUNNING</span>}
@@ -2130,7 +2130,7 @@ const Settings = () => {
               {/* About */}
               <div className="border-t border-gray-200 pt-8">
                 <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border-2 border-emerald-200 p-6 text-center">
-                  <h3 className="text-base font-semibold text-gray-800 mb-2">AByte ERP</h3>
+                  <h3 className="text-base font-semibold text-gray-800 mb-2">Abyte Dinex</h3>
                   <p className="text-gray-600 mb-1">Enterprise Point of Sale System</p>
                   <p className="text-sm text-gray-500">Version 1.0.0</p>
                 </div>

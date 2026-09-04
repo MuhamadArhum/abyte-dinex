@@ -9,7 +9,7 @@ const logger = require('../config/logger');
 const { query } = require('../config/database');
 
 const DEFAULTS = {
-  company_name:         'AByte ERP',
+  company_name:         'Abyte Dinex',
   logo_url:             null,
   primary_color:        '#10b981',
   currency_symbol:      'Rs.',

@@ -30,7 +30,7 @@ export default function TabsLayout() {
         <View style={styles.headerCenter}>
           <View style={styles.headerBrand}>
             <Ionicons name="restaurant" size={17} color={C.primaryBd} />
-            <Text style={styles.headerTitle}>Abyte ERP Waiter</Text>
+            <Text style={styles.headerTitle}>Abyte Dinex Waiter</Text>
           </View>
           <Text style={styles.headerSub}>Restaurant Order System</Text>
         </View>

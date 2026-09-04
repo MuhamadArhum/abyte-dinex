@@ -62,7 +62,7 @@ function deleteOldBackups(baseDir) {
 
 async function main() {
   console.log(`\n${c.bold}${c.cyan}══════════════════════════════════════${c.reset}`);
-  console.log(`${c.bold}  Abyte ERP — Backup All Tenant DBs${c.reset}`);
+  console.log(`${c.bold}  Abyte Dinex — Backup All Tenant DBs${c.reset}`);
   console.log(`${c.cyan}══════════════════════════════════════${c.reset}\n`);
 
   // Resolve backup directory

@@ -168,7 +168,7 @@ const WalkInOrders = () => {
         : 'Dine-In';
 
       setKotViewData({
-        storeName:   st.store_name || 'AByte ERP',
+        storeName:   st.store_name || 'Abyte Dinex',
         tokenNo:     String(sale.token_no || sale.sale_id),
         tableNo:     fullSale.table_name || orderTypeLabel,
         orderType:   orderTypeLabel,

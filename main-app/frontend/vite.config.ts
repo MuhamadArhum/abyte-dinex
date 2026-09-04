@@ -17,8 +17,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/*.png'],
       manifest: {
-        name: 'Abyte ERP',
-        short_name: 'Abyte ERP',
+        name: 'Abyte Dinex',
+        short_name: 'Abyte Dinex',
         description: 'Enterprise Point of Sale System',
         theme_color: '#059669',
         background_color: '#ffffff',

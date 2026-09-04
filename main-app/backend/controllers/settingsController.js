@@ -18,7 +18,7 @@ function resolveUploadsDir() {
   if (process.env.UPLOADS_DIR) return process.env.UPLOADS_DIR;
   const defaultDir = path.join(__dirname, '../uploads');
   try { fs.mkdirSync(defaultDir, { recursive: true }); return defaultDir; } catch {
-    const fallback = path.join(os.homedir(), 'AppData', 'Roaming', 'AByte ERP Server', 'uploads');
+    const fallback = path.join(os.homedir(), 'AppData', 'Roaming', 'Abyte Dinex Server', 'uploads');
     fs.mkdirSync(fallback, { recursive: true });
     return fallback;
   }
@@ -53,7 +53,7 @@ exports.getSettings = async (req, res) => {
     const rows = await query('SELECT * FROM store_settings WHERE setting_id = 1');
     if (rows.length === 0) {
       return res.json({
-        store_name: 'AByte ERP',
+        store_name: 'Abyte Dinex',
         address: '', phone: '', receipt_footer: 'Thank you!',
         tax_rate: 0, tax_on_cash: 0, tax_on_card: 0, tax_on_online: 0,
         pos_mode: 'simple', pos_tax_config: null,
@@ -623,7 +623,7 @@ function buildEscPosReceipt(data, paperWidth) {
   r += ESC + 'a\x01';                           // Center
   r += ESC + '!\x10';                           // Double height
   r += ESC + 'E\x01';                           // Bold on
-  r += (data.storeName || 'AByte ERP') + '\n';
+  r += (data.storeName || 'Abyte Dinex') + '\n';
   r += ESC + '!\x00';                           // Normal size
   r += ESC + 'E\x00';                           // Bold off
   if (data.storeAddress) r += data.storeAddress + '\n';
@@ -692,7 +692,7 @@ function buildEscPosDocument(data, paperWidth, docType) {
   r += ESC + '@';
   r += ESC + 'a\x01'; // Center
   r += ESC + '!\x10'; r += ESC + 'E\x01';
-  r += (data.storeName || 'AByte ERP') + '\n';
+  r += (data.storeName || 'Abyte Dinex') + '\n';
   r += ESC + '!\x00'; r += ESC + 'E\x00';
   if (data.storeAddress) r += data.storeAddress + '\n';
   if (data.storePhone) r += 'Tel: ' + data.storePhone + '\n';

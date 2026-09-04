@@ -10,7 +10,7 @@ function resolveBackupDir() {
   if (process.env.BACKUPS_DIR) return process.env.BACKUPS_DIR;
   const defaultDir = path.join(__dirname, '..', 'backups');
   try { fs.mkdirSync(defaultDir, { recursive: true }); return defaultDir; } catch {
-    const fallback = path.join(os.homedir(), 'AppData', 'Roaming', 'AByte ERP Server', 'backups');
+    const fallback = path.join(os.homedir(), 'AppData', 'Roaming', 'Abyte Dinex Server', 'backups');
     fs.mkdirSync(fallback, { recursive: true });
     return fallback;
   }

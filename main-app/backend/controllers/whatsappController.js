@@ -258,7 +258,7 @@ exports.sendInvoice = async (req, res) => {
 
     // 4. Build message text
     const currency   = cfg.currency_symbol || 'Rs.';
-    const storeName  = cfg.store_name || 'AByte POS';
+    const storeName  = cfg.store_name || 'Abyte Dinex';
     const invoiceNo  = sale.invoice_no || String(sale_id);
     const total      = parseFloat(sale.total_amount || 0).toFixed(0);
     const saleDate   = sale.sale_date

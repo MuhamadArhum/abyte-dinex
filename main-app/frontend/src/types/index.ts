@@ -1,5 +1,5 @@
 // =============================================================
-// types/index.ts - Shared TypeScript types for Abyte ERP
+// types/index.ts - Shared TypeScript types for Abyte Dinex
 // Replace 'any' usages with these concrete types.
 // =============================================================
 

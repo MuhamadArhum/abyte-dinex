@@ -94,7 +94,7 @@ export default function LoginScreen() {
           <View style={styles.logoWrap}>
             <Image source={logo} style={styles.logoImg} resizeMode="contain" />
           </View>
-          <Text style={styles.appName}>Abyte ERP Waiter</Text>
+          <Text style={styles.appName}>Abyte Dinex Waiter</Text>
           <Text style={styles.appTagline}>Restaurant Order Management</Text>
 
           {/* Pill badges */}
@@ -216,7 +216,7 @@ export default function LoginScreen() {
             <View style={styles.footerLine} />
             <View style={styles.footerCenter}>
               <Ionicons name="shield-checkmark" size={12} color={C.t3} />
-              <Text style={styles.footerText}>Abyte ERP  ·  v1.0</Text>
+              <Text style={styles.footerText}>Abyte Dinex  ·  v1.0</Text>
             </View>
             <View style={styles.footerLine} />
           </View>

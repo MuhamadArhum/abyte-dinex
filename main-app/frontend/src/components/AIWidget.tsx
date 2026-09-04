@@ -28,7 +28,7 @@ const AIWidgetInner = () => {
     {
       id: '1',
       role: 'model',
-      text: 'Hello! 👋 I am your AByte AI Assistant.\n\nI have access to your live business data and can help you with:\n\n• Sales & revenue analysis\n• Inventory & stock levels\n• Customer insights\n• Staff & payroll info\n• Expense tracking\n• Business performance\n\nAsk me in English or Urdu!',
+      text: 'Hello! 👋 I am your Abyte Dinex AI Assistant.\n\nI have access to your live business data and can help you with:\n\n• Sales & revenue analysis\n• Inventory & stock levels\n• Customer insights\n• Staff & payroll info\n• Expense tracking\n• Business performance\n\nAsk me in English or Urdu!',
       timestamp: new Date()
     }
   ]);
@@ -159,7 +159,7 @@ const AIWidgetInner = () => {
               </div>
               <div>
                 <h3 className="font-semibold text-sm flex items-center gap-2">
-                  AByte AI Assistant
+                  Abyte Dinex AI Assistant
                   <Sparkles size={16} className="text-yellow-300 animate-pulse" />
                 </h3>
                 <span className="text-xs text-emerald-100 flex items-center gap-1.5">

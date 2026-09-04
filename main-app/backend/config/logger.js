@@ -20,7 +20,7 @@ function resolveLogDir() {
   if (process.env.LOG_DIR) return process.env.LOG_DIR;
   const devDir = path.join(__dirname, '../logs');
   try { fs.mkdirSync(devDir, { recursive: true }); return devDir; } catch {
-    return path.join(os.homedir(), 'AppData', 'Roaming', 'AByte ERP Server', 'logs');
+    return path.join(os.homedir(), 'AppData', 'Roaming', 'Abyte Dinex Server', 'logs');
   }
 }
 const logDir = resolveLogDir();

@@ -130,7 +130,7 @@ export default function RefreshLoader() {
 
           {/* Text */}
           <Animated.View style={{ opacity: textOpacity, transform: [{ translateY: textY }], alignItems: 'center' }}>
-            <Text style={styles.brand}>Abyte ERP Waiter</Text>
+            <Text style={styles.brand}>Abyte Dinex Waiter</Text>
             <Text style={styles.sub}>Refreshing app data...</Text>
 
             {/* Animated dots */}

@@ -1,5 +1,5 @@
 ﻿// =============================================================
-// server.js - Main Entry Point for AByte ERP Backend
+// server.js - Main Entry Point for Abyte Dinex Backend
 //
 // Phase 4: Single-tenant LAN deployment.
 // One DB, no master DB, no module gating.
@@ -331,7 +331,7 @@ function resolveUploadsDir() {
   if (process.env.UPLOADS_DIR) return process.env.UPLOADS_DIR;
   const defaultDir = path.join(__dirname, 'uploads');
   try { _fs.mkdirSync(defaultDir, { recursive: true }); return defaultDir; } catch {
-    const fallback = path.join(_os.homedir(), 'AppData', 'Roaming', 'AByte ERP Server', 'uploads');
+    const fallback = path.join(_os.homedir(), 'AppData', 'Roaming', 'Abyte Dinex Server', 'uploads');
     _fs.mkdirSync(fallback, { recursive: true });
     return fallback;
   }
@@ -411,7 +411,7 @@ process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 // ── Start Server ─────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 const httpServer = app.listen(PORT, async () => {
-  logger.info(`AByte ERP backend started`, {
+  logger.info(`Abyte Dinex backend started`, {
     port:    PORT,
     db:      process.env.DB_NAME || 'abyte_pos',
     origins: allowedOrigins,

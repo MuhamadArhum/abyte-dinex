@@ -70,7 +70,7 @@ export default function ResetPassword() {
             <span className="text-lg font-black text-white">A</span>
           </div>
           <div>
-            <p className="text-white font-bold text-base leading-tight">AByte <span className="text-emerald-400">ERP</span></p>
+            <p className="text-white font-bold text-base leading-tight">Abyte <span className="text-emerald-400">Dinex</span></p>
             <p className="text-[10px] text-slate-500">Business Solution</p>
           </div>
         </motion.div>
@@ -88,7 +88,7 @@ export default function ResetPassword() {
             </span>
           </h1>
           <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
-            Choose a strong password to protect your AByte ERP account. It must be at least 8 characters with a mix of letters and numbers.
+            Choose a strong password to protect your Abyte Dinex account. It must be at least 8 characters with a mix of letters and numbers.
           </p>
 
           <div className="mt-10 p-5 bg-white/[0.04] border border-white/[0.08] rounded-2xl space-y-3">
@@ -110,7 +110,7 @@ export default function ResetPassword() {
             <Zap size={12} className="text-emerald-500/50" />
             <span className="text-slate-600 text-xs">Secure & Encrypted</span>
           </div>
-          <span className="text-slate-700 text-xs">© 2025 AByte</span>
+          <span className="text-slate-700 text-xs">© 2025 Abyte Dinex</span>
         </motion.div>
       </div>
 
@@ -130,7 +130,7 @@ export default function ResetPassword() {
               <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
                 <span className="font-black text-white">A</span>
               </div>
-              <span className="text-lg font-bold text-gray-800">AByte ERP</span>
+              <span className="text-lg font-bold text-gray-800">Abyte Dinex</span>
             </div>
 
             <AnimatePresence mode="wait">
@@ -235,7 +235,7 @@ export default function ResetPassword() {
             </AnimatePresence>
           </div>
 
-          <p className="text-center text-xs text-gray-400 mt-4">AByte ERP © 2025 · All rights reserved</p>
+          <p className="text-center text-xs text-gray-400 mt-4">Abyte Dinex © 2025 · All rights reserved</p>
         </motion.div>
       </div>
     </div>

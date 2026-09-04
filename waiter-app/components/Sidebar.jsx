@@ -100,7 +100,7 @@ export default function Sidebar({ visible, onClose }) {
           <View style={styles.brand}>
             <Image source={logo} style={styles.brandLogo} resizeMode="contain" />
             <View style={{ flex: 1 }}>
-              <Text style={styles.brandName}>Abyte ERP Waiter</Text>
+              <Text style={styles.brandName}>Abyte Dinex Waiter</Text>
               <Text style={styles.brandVer}>POS System  ·  v1.0</Text>
             </View>
             <View style={styles.liveChip}>
