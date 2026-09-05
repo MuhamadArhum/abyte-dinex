@@ -624,6 +624,39 @@ const MIGRATIONS = [
         FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE RESTRICT`);
     },
   },
+  {
+    version: 26,
+    name: 'sales_controller_schema_drift',
+    // Absorbs all ALTER TABLE statements that were previously executed inline
+    // inside salesController.ensureSalesSchema on every API call. Moving them
+    // here keeps the architectural rule: schema changes only through migrations.
+    async run(db) {
+      const exec = async (sql) => {
+        try { await queryDb(db, sql); } catch (e) {
+          if (!e.message?.includes('Duplicate column name') &&
+              !e.message?.includes('already exists')) throw e;
+        }
+      };
+      // Sales columns
+      await exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS note TEXT NULL`);
+      await exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name VARCHAR(150) NULL`);
+      await exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(30) NULL`);
+      await exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS tax_percent DECIMAL(5,2) DEFAULT 0`);
+      await exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS tax_amount DECIMAL(10,2) DEFAULT 0`);
+      await exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS additional_charges_percent DECIMAL(5,2) DEFAULT 0`);
+      await exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS additional_charges_amount DECIMAL(10,2) DEFAULT 0`);
+      await exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS amount_paid DECIMAL(10,2) DEFAULT 0`);
+      await exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount DECIMAL(10,2) DEFAULT 0`);
+      await exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS covers INT NULL`);
+      // Sale_details columns
+      await exec(`ALTER TABLE sale_details ADD COLUMN IF NOT EXISTS note TEXT NULL`);
+      await exec(`ALTER TABLE sale_details ADD COLUMN IF NOT EXISTS variant_name VARCHAR(100) NULL`);
+      // Deliveries columns (tables themselves are in schema.sql)
+      await exec(`ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS delivery_charges DECIMAL(10,2) DEFAULT 0`);
+      await exec(`ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS notes TEXT NULL`);
+      await exec(`ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS delivery_number VARCHAR(30) NULL`);
+    },
+  },
 ];
 
 async function ensureMigrationsTable(db) {

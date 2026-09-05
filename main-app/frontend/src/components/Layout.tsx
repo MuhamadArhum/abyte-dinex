@@ -105,11 +105,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   });
   const toggleSection = (key: string) =>
     setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
-  const [notifications] = useState([
-    { id: 1, title: 'Low Stock Alert', message: 'Product ABC is running low', time: '5m ago', read: false },
-    { id: 2, title: 'New Order', message: 'Order #1234 received', time: '10m ago', read: false },
-    { id: 3, title: 'Payment Successful', message: 'Payment of $150 received', time: '1h ago', read: true },
-  ]);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   const menuStructure: MenuItem[] = [
@@ -230,8 +225,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     logout();
     navigate('/login');
   };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   const renderMenuItem = (item: MenuItem, index: number) => {
     const Icon = item.icon;
@@ -510,14 +503,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <button
                 onClick={() => { setIsNotificationOpen(!isNotificationOpen); setIsProfileOpen(false); }}
                 className="relative p-2 md:p-2.5 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                title="Notifications"
               >
                 <Bell size={18} className="md:hidden" />
                 <Bell size={22} className="hidden md:block" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-0.5 right-0.5 md:top-1 md:right-1 w-4 h-4 md:w-5 md:h-5 bg-red-500 text-white text-[9px] md:text-xs rounded-full flex items-center justify-center font-bold">
-                    {unreadCount}
-                  </span>
-                )}
               </button>
 
               {/* Notification Dropdown */}
@@ -525,30 +514,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 <div className="absolute right-0 top-full mt-2 w-72 md:w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
                     <h3 className="text-sm font-semibold text-gray-800">Notifications</h3>
-                    {unreadCount > 0 && (
-                      <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-semibold rounded-full">
-                        {unreadCount} new
-                      </span>
-                    )}
                   </div>
-                  <div className="divide-y divide-gray-50 max-h-64 md:max-h-72 overflow-y-auto">
-                    {notifications.map((n) => (
-                      <div key={n.id}
-                        className={`flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer ${!n.read ? 'bg-emerald-50/40' : ''}`}
-                      >
-                        <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${!n.read ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-semibold ${!n.read ? 'text-gray-800' : 'text-gray-600'}`}>{n.title}</p>
-                          <p className="text-xs text-gray-500 truncate">{n.message}</p>
-                        </div>
-                        <span className="text-xs text-gray-400 flex-shrink-0">{n.time}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50">
-                    <button className="w-full text-xs text-emerald-600 font-semibold hover:text-emerald-700 transition-colors">
-                      Mark all as read
-                    </button>
+                  <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+                    <Bell size={32} className="text-gray-300 mb-3" />
+                    <p className="text-sm font-medium text-gray-500">No notifications</p>
+                    <p className="text-xs text-gray-400 mt-1">You're all caught up!</p>
                   </div>
                 </div>
               )}

@@ -105,6 +105,15 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
   : ['http://localhost:5173', 'http://localhost:3000'];
 
+// Wildcard CORS with credentials is rejected by all browsers and is a security misconfiguration.
+if (allowedOrigins.includes('*') && process.env.NODE_ENV === 'production') {
+  logger.error('FATAL: ALLOWED_ORIGINS=* is not permitted in production. Set explicit origin URLs and restart.');
+  process.exit(1);
+}
+if (allowedOrigins.includes('*')) {
+  logger.warn('WARNING: ALLOWED_ORIGINS=* allows all origins. Never use this in production.');
+}
+
 const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (e.g. same-origin, mobile apps, curl)
@@ -131,7 +140,7 @@ const apiLimiter = rateLimit({
 // Strict limiter for login: 10 attempts per 15 minutes per IP
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50,
+  max: 10,
   skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,

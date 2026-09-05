@@ -10,62 +10,8 @@ const logger = require('../config/logger');
 const { getConnection, query } = require('../config/database');  // DB helpers (getConnection for transactions)
 const { logAction } = require('../services/auditService');
 
-// Ensure tables that are JOIN-ed in sales queries exist — tracked per tenant DB
-const _schemaDone = new Set();
-async function ensureSalesSchema(db) {
-  if (_schemaDone.has(db)) return;
-  _schemaDone.add(db);
-  const stmts = [
-    `CREATE TABLE IF NOT EXISTS restaurant_tables (
-      table_id   INT PRIMARY KEY AUTO_INCREMENT,
-      table_name VARCHAR(50) NOT NULL,
-      floor      VARCHAR(50) DEFAULT 'Main',
-      capacity   INT DEFAULT 4,
-      status     ENUM('available','occupied') DEFAULT 'available',
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`,
-    `CREATE TABLE IF NOT EXISTS deliveries (
-      delivery_id      INT PRIMARY KEY AUTO_INCREMENT,
-      delivery_number  VARCHAR(30) NULL,
-      sale_id          INT NULL,
-      customer_id      INT NULL,
-      delivery_address TEXT NULL,
-      delivery_city    VARCHAR(100) DEFAULT '',
-      delivery_phone   VARCHAR(30) DEFAULT '',
-      rider_name       VARCHAR(100) DEFAULT '',
-      rider_phone      VARCHAR(30) DEFAULT '',
-      status           VARCHAR(30) DEFAULT 'pending',
-      delivery_charges DECIMAL(10,2) DEFAULT 0,
-      estimated_delivery DATETIME NULL,
-      notes            TEXT NULL,
-      created_by       INT NULL,
-      branch_id        INT NULL,
-      created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`,
-    `ALTER TABLE sales ADD COLUMN IF NOT EXISTS note TEXT NULL`,
-    `ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name VARCHAR(150) NULL`,
-    `ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(30) NULL`,
-    `ALTER TABLE sales ADD COLUMN IF NOT EXISTS tax_percent DECIMAL(5,2) DEFAULT 0`,
-    `ALTER TABLE sales ADD COLUMN IF NOT EXISTS tax_amount DECIMAL(10,2) DEFAULT 0`,
-    `ALTER TABLE sales ADD COLUMN IF NOT EXISTS additional_charges_percent DECIMAL(5,2) DEFAULT 0`,
-    `ALTER TABLE sales ADD COLUMN IF NOT EXISTS additional_charges_amount DECIMAL(10,2) DEFAULT 0`,
-    `ALTER TABLE sales ADD COLUMN IF NOT EXISTS amount_paid DECIMAL(10,2) DEFAULT 0`,
-    `ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount DECIMAL(10,2) DEFAULT 0`,
-    `ALTER TABLE sale_details ADD COLUMN IF NOT EXISTS note TEXT NULL`,
-    `ALTER TABLE sale_details ADD COLUMN IF NOT EXISTS variant_id INT NULL`,
-    `ALTER TABLE sale_details ADD COLUMN IF NOT EXISTS variant_name VARCHAR(100) NULL`,
-    `ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS delivery_charges DECIMAL(10,2) DEFAULT 0`,
-    `ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS notes TEXT NULL`,
-    `ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS delivery_number VARCHAR(30) NULL`,
-  ];
-  for (const sql of stmts) {
-    try { await query(sql); } catch (e) {
-      if (!e.message?.includes('Duplicate column') && !e.message?.includes('already exists')) {
-        logger.warn('[salesController] schema fix warning:', e.message);
-      }
-    }
-  }
-}
+// Schema columns for sales are managed by migrationService.js (migration v26).
+// ensureSalesSchema was removed — do not add ALTER TABLE calls in controllers.
 
 // Helper: Round to 2 decimal places for currency
 const round2 = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
@@ -173,7 +119,7 @@ const parsePagination = (page, limit) => {
 exports.createSale = async (req, res) => {
   let conn;  // Database connection for the transaction
   try {
-    await ensureSalesSchema('');
+
     const {
       items,
       discount,
@@ -265,9 +211,9 @@ exports.createSale = async (req, res) => {
       return res.status(400).json({ message: `Discount cannot exceed ${maxDiscountPercent}% of subtotal for your role` });
     }
 
-    // Step 3: Always generate invoice_no; also generate token_no for pending orders
+    // Step 3: Generate invoice_no and token_no under a single named lock to prevent
+    // duplicate numbers when two POS terminals submit simultaneously.
     let token_no = null;
-    // Acquire a named lock so concurrent sales don't generate the same invoice number
     const lockKey = `invoice_gen_${'default'}`;
     await conn.query('SELECT GET_LOCK(?, 10) as locked', [lockKey]);
     let invoice_no;
@@ -277,25 +223,25 @@ exports.createSale = async (req, res) => {
          FROM sales WHERE invoice_no IS NOT NULL`
       );
       invoice_no = `INV-${String(invResult[0].next_inv).padStart(5, '0')}`;
+
+      if (status === 'pending') {
+        // Token prefix by order type: DIN = dine_in, TA = takeaway, DL = delivery, WI = on_spot/walk_in
+        const prefixMap = { dine_in: 'DIN', takeaway: 'TA', delivery: 'DL' };
+        const prefix = prefixMap[order_type] || 'WI';
+
+        const shiftRows = await conn.query(
+          `SELECT opened_at FROM cash_registers WHERE status = 'open' ORDER BY register_id DESC LIMIT 1`
+        );
+        const shiftStart = shiftRows.length > 0 ? shiftRows[0].opened_at : new Date().toISOString().slice(0, 10);
+        const tokenResult = await conn.query(
+          `SELECT COALESCE(MAX(CAST(REPLACE(token_no, ?, '') AS UNSIGNED)), 0) + 1 as next_token
+           FROM sales WHERE token_no LIKE ? AND sale_date >= ?`,
+          [`${prefix}-`, `${prefix}-%`, shiftStart]
+        );
+        token_no = `${prefix}-${String(tokenResult[0].next_token).padStart(2, '0')}`;
+      }
     } finally {
       await conn.query('SELECT RELEASE_LOCK(?)', [lockKey]);
-    }
-
-    if (status === 'pending') {
-      // Token prefix by order type: DIN = dine_in, TA = takeaway, DL = delivery, WI = on_spot/walk_in
-      const prefixMap = { dine_in: 'DIN', takeaway: 'TA', delivery: 'DL' };
-      const prefix = prefixMap[order_type] || 'WI';
-
-      const shiftRows = await conn.query(
-        `SELECT opened_at FROM cash_registers WHERE status = 'open' ORDER BY register_id DESC LIMIT 1`
-      );
-      const shiftStart = shiftRows.length > 0 ? shiftRows[0].opened_at : new Date().toISOString().slice(0, 10);
-      const tokenResult = await conn.query(
-        `SELECT COALESCE(MAX(CAST(REPLACE(token_no, ?, '') AS UNSIGNED)), 0) + 1 as next_token
-         FROM sales WHERE token_no LIKE ? AND sale_date >= ?`,
-        [`${prefix}-`, `${prefix}-%`, shiftStart]
-      );
-      token_no = `${prefix}-${String(tokenResult[0].next_token).padStart(2, '0')}`;
     }
 
     // Step 4: Insert the sale header record
@@ -421,7 +367,7 @@ exports.createSale = async (req, res) => {
 // --- Get Pending Sales ---
 exports.getPending = async (req, res) => {
   try {
-    await ensureSalesSchema('');
+
     const { page, limit, order_type, user_id, waiter } = req.query;
 
     // Map frontend 'on_spot' filter to include both 'on_spot' and NULL order_type rows
@@ -709,13 +655,10 @@ exports.updateSaleItems = async (req, res) => {
 };
 
 // --- Delete/Void Sale ---
+// Route already enforces authorize('Admin') — no need to repeat role check here.
 exports.deleteSale = async (req, res) => {
   let conn;
   try {
-    if (req.user.role_name !== 'Admin') {
-      return res.status(403).json({ message: 'Only Admin can delete orders' });
-    }
-
     const { id } = req.params;
 
     conn = await getConnection();
@@ -773,7 +716,7 @@ exports.syncTax = async (req, res) => {
 // --- Get Today's Sales ---
 exports.getToday = async (req, res) => {
   try {
-    await ensureSalesSchema('');
+
     const today = new Date().toISOString().split('T')[0];
     const sales = await query(`
       SELECT s.*, u.name as cashier_name
@@ -794,7 +737,7 @@ exports.getToday = async (req, res) => {
 // --- Get All Sales ---
 exports.getAll = async (req, res) => {
   try {
-    await ensureSalesSchema('');
+
     const {
       page, limit, search, status, date_from, date_to,
       order_type, shift_start, shift_end,

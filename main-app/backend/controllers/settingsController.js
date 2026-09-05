@@ -46,7 +46,7 @@ const logoUpload = multer({
 // --- Get Store Settings ---
 exports.getSettings = async (req, res) => {
   try {
-    const cacheKey = `settings:${''}`;
+    const cacheKey = 'settings:';
     const cached = await cache.get(cacheKey);
     if (cached) return res.json(cached);
 

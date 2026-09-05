@@ -31,8 +31,7 @@ exports.sendTest = async (req, res) => {
     const { to } = req.body;
     if (!to) return res.status(400).json({ message: 'to email is required' });
 
-    const { sendMail } = require('../services/emailService');
-    await require('../services/emailService').sendLoginAlert({
+    await emailService.sendLoginAlert({
       to,
       name: req.user.name,
       ip: req.ip,
@@ -84,7 +83,7 @@ exports.sendInvoice = async (req, res) => {
     `, [sale_id]);
 
     // Fetch store settings for branding
-    const [settings] = await query('SELECT * FROM settings LIMIT 1').catch(() => [{}]);
+    const [settings] = await query('SELECT * FROM store_settings LIMIT 1').catch(() => [{}]);
 
     const result = await emailService.sendInvoiceEmail({
       to: recipientEmail,

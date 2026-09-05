@@ -9,8 +9,9 @@ const {
 
 router.use(authenticate);
 
-router.get('/', getAllPermissions);
-router.get('/:role', getPermissionsByRole);
+// Admin-only: non-admins must not enumerate role permissions
+router.get('/', authorize('Admin'), getAllPermissions);
+router.get('/:role', authorize('Admin'), getPermissionsByRole);
 router.put('/:role', authorize('Admin'), updatePermissions);
 
 module.exports = router;

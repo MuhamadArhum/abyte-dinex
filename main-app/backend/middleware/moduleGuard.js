@@ -39,42 +39,10 @@ const MODULES = {
       { key: 'inventory.reports',     label: 'Inventory Reports' },
     ],
   },
-  accounts: {
-    key: 'accounts',
-    name: 'Accounts',
-    price: 2999,
-    description: 'Journal Entries, Vouchers, Bank Accounts, Ledger',
-    subModules: [
-      { key: 'accounts.chart',            label: 'Chart of Accounts' },
-      { key: 'accounts.journal',          label: 'Journal Voucher' },
-      { key: 'accounts.payment-vouchers', label: 'Payment & Receipt Vouchers' },
-      { key: 'accounts.ledger',           label: 'Ledger, Trial Balance & Reports' },
-      { key: 'accounts.bank',             label: 'Bank Accounts' },
-      { key: 'accounts.analytics',        label: 'Analytics & Reports' },
-    ],
-  },
-  hr: {
-    key: 'hr',
-    name: 'HR & Payroll',
-    price: 2999,
-    description: 'Staff, Attendance, Salary, Leaves, Loans',
-    subModules: [
-      { key: 'hr.staff',             label: 'Staff Management' },
-      { key: 'hr.attendance',        label: 'Attendance & Biometric' },
-      { key: 'hr.payroll',           label: 'Payroll & Salary' },
-      { key: 'hr.salary-components', label: 'Salary Components' },
-      { key: 'hr.leaves',            label: 'Leave Management' },
-      { key: 'hr.loans',             label: 'Loans' },
-      { key: 'hr.reports',           label: 'Reports & Ledger' },
-    ],
-  },
 };
 
-// Legacy plan support
 const PLAN_MODULES = {
-  basic:        ['sales', 'inventory'],
-  professional: ['sales', 'inventory', 'accounts'],
-  enterprise:   ['sales', 'inventory', 'accounts', 'hr'],
+  standard: ['sales', 'inventory'],
 };
 
 // Backward-compatible check:
@@ -109,7 +77,7 @@ const calculatePrice = (selectedModules = []) => {
 };
 
 const getModuleList = () => Object.values(MODULES);
-const getPlanModules = (plan) => PLAN_MODULES[plan] || PLAN_MODULES.basic;
+const getPlanModules = (plan) => PLAN_MODULES[plan] || PLAN_MODULES.standard;
 const isModuleAllowed = (modulesEnabled, moduleName) => {
   if (!modulesEnabled) return true;
   return hasModuleAccess(modulesEnabled, moduleName);
