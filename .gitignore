@@ -31,3 +31,32 @@ main-app/backend/seed.js
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local env overrides
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# Uploads (may contain user files)
+uploads/
+
+# Build artifacts
+dist/
+build/
