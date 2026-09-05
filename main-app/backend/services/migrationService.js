@@ -573,6 +573,57 @@ const MIGRATIONS = [
       }
     },
   },
+  {
+    version: 25,
+    name: 'add_missing_fk_constraints_and_indexes',
+    async run(db) {
+      const exec = async (sql) => {
+        try { await queryDb(db, sql); } catch (e) {
+          if (!e.message?.includes('Duplicate key name') &&
+              !e.message?.includes('already exists') &&
+              !e.message?.includes("Can't create table") &&
+              !e.message?.includes('errno: 150')) throw e;
+        }
+      };
+
+      // D1: Add FK for sale_details.variant_id (not present in schema, only an index)
+      await exec(`ALTER TABLE sale_details ADD CONSTRAINT fk_sale_details_variant
+        FOREIGN KEY (variant_id) REFERENCES product_variants(variant_id) ON DELETE SET NULL`);
+
+      // D2: Add FK for stock_adjustments.variant_id
+      await exec(`ALTER TABLE stock_adjustments ADD CONSTRAINT fk_stock_adj_variant
+        FOREIGN KEY (variant_id) REFERENCES product_variants(variant_id) ON DELETE SET NULL`);
+
+      // D4: Add FK for stock_layers.pv_id → inv_purchase_vouchers
+      await exec(`ALTER TABLE stock_layers ADD CONSTRAINT fk_stock_layers_pv
+        FOREIGN KEY (pv_id) REFERENCES inv_purchase_vouchers(pv_id) ON DELETE SET NULL`);
+
+      // D6: Fix print_queue.payload type — schema has LONGTEXT, migration v11 creates JSON
+      // Align the schema column to JSON for consistency and validation
+      await exec(`ALTER TABLE print_queue MODIFY COLUMN payload JSON NOT NULL`);
+
+      // D8: Add missing indexes on frequently queried foreign keys
+      // (bundle_items already has idx_bundle_items_bundle_id in schema — skip to avoid duplicate)
+      await exec(`CREATE INDEX IF NOT EXISTS idx_issue_items_issue_id ON stock_issue_items (issue_id)`);
+      await exec(`CREATE INDEX IF NOT EXISTS idx_issue_return_items_return_id ON stock_issue_return_items (return_id)`);
+      await exec(`CREATE INDEX IF NOT EXISTS idx_pr_items_pr_id ON purchase_return_items (pr_id)`);
+      await exec(`CREATE INDEX IF NOT EXISTS idx_quotation_items_quotation_id ON quotation_items (quotation_id)`);
+
+      // D9: Remove orphaned store_id column left from multi-store removal (migration v22)
+      // stock_adjustments still has store_id in schema; inv_purchase_vouchers does not (use IF EXISTS)
+      await exec(`ALTER TABLE stock_adjustments DROP COLUMN IF EXISTS store_id`);
+      await exec(`ALTER TABLE inv_purchase_vouchers DROP COLUMN IF EXISTS store_id`);
+
+      // D10: Add FK for quotations.converted_sale_id
+      await exec(`ALTER TABLE quotations ADD CONSTRAINT fk_quotation_converted_sale
+        FOREIGN KEY (converted_sale_id) REFERENCES sales(sale_id) ON DELETE SET NULL`);
+
+      // D12: Make FK for sale_details.product_id explicit with RESTRICT
+      // Schema already has this FK, but this is a no-op on existing installs due to exec() swallowing duplicate errors
+      await exec(`ALTER TABLE sale_details ADD CONSTRAINT fk_sale_details_product
+        FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE RESTRICT`);
+    },
+  },
 ];
 
 async function ensureMigrationsTable(db) {

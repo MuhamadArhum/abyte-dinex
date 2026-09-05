@@ -552,6 +552,7 @@ CREATE TABLE IF NOT EXISTS product_bundles (
     INDEX idx_product_bundles_active (is_active)
 );
 
+-- Also created in migration v8 for upgrades
 -- Restaurant Tables (dine-in table management)
 CREATE TABLE IF NOT EXISTS restaurant_tables (
     table_id INT PRIMARY KEY AUTO_INCREMENT,
@@ -689,7 +690,7 @@ CREATE TABLE IF NOT EXISTS raw_sale_items (
 CREATE TABLE IF NOT EXISTS print_queue (
     id INT PRIMARY KEY AUTO_INCREMENT,
     type VARCHAR(50) NOT NULL DEFAULT 'invoice',
-    payload LONGTEXT NOT NULL,
+    payload JSON NOT NULL,
     status ENUM('pending','printing','done','failed') NOT NULL DEFAULT 'pending',
     error_message TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
