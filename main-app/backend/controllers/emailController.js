@@ -11,7 +11,7 @@ const emailService = require('../services/emailService');
 exports.getStatus = async (req, res) => {
   res.json({
     configured: emailService.isConfigured(),
-    host: process.env.EMAIL_HOST || null,
+    host: process.env.EMAIL_HOST ? process.env.EMAIL_HOST.replace(/^(.{3}).*$/, '$1***') : null,
     user: process.env.EMAIL_USER ? process.env.EMAIL_USER.replace(/(.{2})(.+)(@.+)/, '$1***$3') : null,
   });
 };
@@ -21,7 +21,8 @@ exports.testConnection = async (req, res) => {
     await emailService.testConnection();
     res.json({ ok: true, message: 'Email connection successful' });
   } catch (err) {
-    res.status(400).json({ ok: false, message: err.message });
+    logger.error('Test connection error:', err);
+    res.status(400).json({ ok: false, message: 'Email connection failed' });
   }
 };
 
@@ -41,7 +42,7 @@ exports.sendTest = async (req, res) => {
     res.json({ message: `Test email sent to ${to}` });
   } catch (err) {
     logger.error('Test email error:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Email service error' });
   }
 };
 
@@ -101,7 +102,7 @@ exports.sendInvoice = async (req, res) => {
     res.json({ ok: true, message: `Invoice sent to ${recipientEmail}` });
   } catch (err) {
     logger.error('Send invoice email error:', { error: err.message });
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Email service error' });
   }
 };
 
@@ -129,6 +130,6 @@ exports.sendLowStockAlert = async (req, res) => {
     res.json({ message: `Low stock alert sent to ${adminEmail} for ${products.length} products` });
   } catch (err) {
     logger.error('Low stock alert error:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Email service error' });
   }
 };

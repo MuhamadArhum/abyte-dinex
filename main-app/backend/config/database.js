@@ -27,7 +27,10 @@ if (isRemote) {
       sslConfig = { ssl: { rejectUnauthorized: false } };
     }
   } else {
-    console.warn('[DB SSL] DB_SSL_CA is not set for a remote database — SSL certificate verification is DISABLED.');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('[DB SSL] DB_SSL_CA must be set in production. Refusing to start with disabled SSL certificate verification.');
+    }
+    console.error('[DB SSL] WARNING: SSL certificate verification is DISABLED. Set DB_SSL_CA for secure connections.');
     sslConfig = { ssl: { rejectUnauthorized: false } };
   }
 }

@@ -59,8 +59,14 @@ async function blacklistToken(token) {
       [hash, expiresAt]
     );
   } catch (err) {
-    logger.warn('[TokenBlacklist] DB insert failed, using memory fallback', { error: err.message });
+    // SECURITY RISK: If the DB insert fails and only the memory fallback is used,
+    // the blacklisted token will not survive a server restart and will not be shared
+    // across multiple server instances. This means a revoked token could be reused
+    // after a restart or on a different instance. Investigate DB connectivity immediately.
+    logger.error('[TokenBlacklist] DB insert failed — token blacklisted in memory ONLY (not persistent, not shared across instances)', { error: err.message });
     memoryFallback.add(hash);
+    // Return false to signal to the caller that durable blacklisting failed
+    return false;
   }
 }
 
