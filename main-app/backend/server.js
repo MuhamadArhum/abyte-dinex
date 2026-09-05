@@ -210,7 +210,7 @@ const sensitiveOpLimiter = rateLimit({
 
 // Apply rate limiting
 app.use('/api/', apiLimiter);
-// authLimiter removed — single client system
+app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/forgot-password', sensitiveOpLimiter);
 app.use('/api/auth/reset-password',  sensitiveOpLimiter);
 app.use('/api/reports',           heavyLimiter);

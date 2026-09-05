@@ -308,7 +308,7 @@ exports.testConnection = async (req, res) => {
       res.status(400).json({ ok: false, message: 'FBR returned an empty token' });
     } catch (apiErr) {
       logger.warn('[fbrController] testConnection failed:', apiErr.message);
-      res.status(400).json({ ok: false, message: apiErr.message });
+      res.status(400).json({ ok: false, message: 'FBR connection failed. Check credentials and try again.' });
     }
   } catch (err) {
     logger.error('[fbrController] testConnection error:', err);
@@ -377,7 +377,7 @@ exports.postInvoice = async (req, res) => {
       logger.error('[fbrController] postInvoice token error:', tokenErr);
       await query(`UPDATE sales SET fbr_status = 'failed' WHERE sale_id = ?`, [sale_id]).catch(() => {});
       await _logFbrInvoice(sale_id, null, 'failed', null, tokenErr.message, 1);
-      return res.status(502).json({ ok: false, message: `FBR token error: ${tokenErr.message}` });
+      return res.status(502).json({ ok: false, message: 'Failed to obtain FBR token. Check FBR credentials in settings.' });
     }
 
     // --- 6. Build and POST FBR payload ---
@@ -491,7 +491,8 @@ exports.retryFailed = async (req, res) => {
     try {
       token = await getFbrToken(cfg.fbr_username, cfg.fbr_password, cfg.fbr_posid);
     } catch (tokenErr) {
-      return res.status(502).json({ message: `FBR token error: ${tokenErr.message}`, retried: 0, succeeded: 0 });
+      logger.error('[fbrController] retryFailed token error:', tokenErr);
+      return res.status(502).json({ message: 'Failed to obtain FBR token. Check FBR credentials in settings.', retried: 0, succeeded: 0 });
     }
 
     const invoiceUrl = cfg.fbr_mode === 'live' ? FBR_INVOICE_LIVE : FBR_INVOICE_SANDBOX;
