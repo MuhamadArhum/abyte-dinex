@@ -69,6 +69,7 @@ const CategoryWisePurchase= lazy(() => import('./pages/inventory/CategoryWisePur
 const RateHistory         = lazy(() => import('./pages/inventory/RateHistory'));
 const Recipes             = lazy(() => import('./pages/inventory/Recipes'));
 const ProductionOrders    = lazy(() => import('./pages/inventory/ProductionOrders'));
+const StockTransfers      = lazy(() => import('./pages/inventory/StockTransfers'));
 
 // Customers (Sales)
 const Customers = lazy(() => import('./pages/sales/Customers'));
@@ -164,9 +165,9 @@ function App() {
                                 <Routes>
                                   {/* Unguarded */}
                                   <Route path="/"                   element={<Dashboard />} />
-                                  <Route path="/pos"                element={<POS />} />
-                                  <Route path="/walk-in-orders"     element={<WalkInOrders />} />
-                                  <Route path="/cash-register"      element={<CashRegister />} />
+                                  <Route path="/pos"                element={<G k="sales.pos"><POS /></G>} />
+                                  <Route path="/walk-in-orders"     element={<G k="sales.pos"><WalkInOrders /></G>} />
+                                  <Route path="/cash-register"      element={<G k="sales.register"><CashRegister /></G>} />
 
                                   {/* Sales */}
                                   <Route path="/orders"         element={<G k="sales.orders"><Orders /></G>} />
@@ -224,6 +225,7 @@ function App() {
                                   <Route path="/opening-stock"         element={<G k="inventory.products"><OpeningStock /></G>} />
                                   <Route path="/recipes"               element={<G k="inventory.products"><Recipes /></G>} />
                                   <Route path="/production-orders"     element={<G k="inventory.products"><ProductionOrders /></G>} />
+                                  <Route path="/stock-transfers"       element={<G k="inventory.adjustments"><StockTransfers /></G>} />
 
                                   {/* System */}
                                   <Route path="/users"          element={<Suspense fallback={<PageLoader />}><AdminGuard><Users /></AdminGuard></Suspense>} />

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import JsBarcode from 'jsbarcode';
 import api from '../../utils/api';
+import { useToast } from '../../components/Toast';
 import { Plus, Check, X, Minus, Printer, Trash2, RefreshCw } from 'lucide-react';
 
 interface Product {
@@ -74,6 +75,7 @@ function BarcodeImage({ barcode, labelSize, showPrice, showName, showSku, sellin
 }
 
 export default function BarcodeGenerator() {
+  const toast = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [search, setSearch] = useState('');
@@ -98,7 +100,11 @@ export default function BarcodeGenerator() {
         const data = res.data?.products ?? res.data?.data ?? res.data ?? [];
         setProducts(Array.isArray(data) ? data : []);
       })
-      .catch(() => setProducts([]))
+      .catch((err) => {
+        console.error('Failed to load products:', err);
+        toast.error('Failed to load products');
+        setProducts([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -134,8 +140,9 @@ export default function BarcodeGenerator() {
     try {
       await api.post(`/api/products/${product.product_id}/generate-barcode`);
       await fetchProducts(search, typeFilter);
-    } catch {
-      // handle silently
+    } catch (err) {
+      console.error('Failed to generate barcode:', err);
+      toast.error('Failed to generate barcode');
     } finally {
       setGenerating(null);
     }

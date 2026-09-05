@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Save, Package, DollarSign, Boxes, Barcode, Tag, FileText, AlertCircle, PackagePlus } from 'lucide-react';
 import api from '../utils/api';
+import { useToast } from './Toast';
 
 type CategoryType = 'raw_material' | 'semi_finished' | 'finished_good';
 
@@ -40,6 +41,7 @@ interface AddProductModalProps {
 }
 
 const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSuccess, productToEdit, productType = 'finished_good' }) => {
+  const toast = useToast();
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [price, setPrice] = useState('');
@@ -168,6 +170,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSu
     } catch (error: any) {
       console.error('Failed to save product', error);
       setError(error.response?.data?.message || 'Failed to save product');
+      toast.error('Failed to save product. Please try again.');
     } finally {
       setLoading(false);
     }

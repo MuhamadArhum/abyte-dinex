@@ -83,7 +83,8 @@ const AIWidgetInner = () => {
         text: response.data.reply,
         timestamp: new Date()
       }]);
-    } catch {
+    } catch (err) {
+      console.error('AI widget error:', err);
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'model',

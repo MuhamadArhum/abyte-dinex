@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, UtensilsCrossed, Users, X, Layers, Search } from 'lucide-react';
 import api from '../../utils/api';
 import { useToast } from '../../components/Toast';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 interface RestaurantTable {
   table_id: number;
@@ -14,6 +15,7 @@ interface RestaurantTable {
 
 const TableManagement = () => {
   const toast = useToast();
+  const confirm = useConfirm();
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -86,7 +88,8 @@ const TableManagement = () => {
       toast.error('Cannot delete a table with active orders');
       return;
     }
-    if (!confirm(`Are you sure you want to delete table "${table.table_name}"?`)) return;
+    const ok = await confirm({ title: 'Delete Table', message: `Are you sure you want to delete table "${table.table_name}"?`, type: 'danger' });
+    if (!ok) return;
     try {
       await api.delete(`/restaurant/tables/${table.table_id}`);
       toast.success('Table deleted');

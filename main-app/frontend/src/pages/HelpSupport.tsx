@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Search, ChevronDown, ChevronUp, MessageCircle, Mail, BookOpen, Zap, ShoppingCart, Package, Users, DollarSign, Settings, ArrowRight, Keyboard, Video, FileText, LifeBuoy, Plus, X, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useToast } from '../components/Toast';
 import api from '../utils/api';
 
 const faqs: { category: string; icon: any; color: string; items: { q: string; a: string }[] }[] = [
@@ -101,6 +102,7 @@ const PRIORITY_STYLES = {
 };
 
 function TicketsSection() {
+  const toast = useToast();
   const [tickets, setTickets]       = useState<Ticket[]>([]);
   const [loading, setLoading]       = useState(true);
   const [showForm, setShowForm]     = useState(false);
@@ -114,7 +116,10 @@ function TicketsSection() {
     setLoading(true);
     api.get('/support-tickets')
       .then(r => setTickets(r.data))
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Failed to load support tickets:', err);
+        toast.error('Failed to load support tickets');
+      })
       .finally(() => setLoading(false));
   };
 
