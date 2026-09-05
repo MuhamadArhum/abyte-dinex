@@ -4,13 +4,18 @@ const { logAction } = require('../services/auditService');
 
 const pad = (n) => String(n).padStart(6, '0');
 
-async function nextPONumber() {
-  const [last] = await query('SELECT po_number FROM purchase_orders ORDER BY po_id DESC LIMIT 1');
-  if (last?.po_number) {
-    const m = last.po_number.match(/\d+$/);
-    if (m) return `PO-${pad(parseInt(m[0]) + 1)}`;
+async function nextPONumber(conn) {
+  await conn.query("SELECT GET_LOCK('po_number_gen', 10)");
+  try {
+    const [last] = await conn.query('SELECT po_number FROM purchase_orders ORDER BY po_id DESC LIMIT 1');
+    if (last?.po_number) {
+      const m = last.po_number.match(/\d+$/);
+      if (m) return `PO-${pad(parseInt(m[0]) + 1)}`;
+    }
+    return `PO-${pad(1)}`;
+  } finally {
+    await conn.query("SELECT RELEASE_LOCK('po_number_gen')");
   }
-  return `PO-${pad(1)}`;
 }
 
 const parsePagination = (page, limit) => {
@@ -108,7 +113,7 @@ exports.create = async (req, res) => {
 
     const extraCharges = Number(additional_charges) || 0;
     const total = items.reduce((sum, item) => sum + (item.quantity_ordered * item.unit_cost), 0) + extraCharges;
-    const po_number = await nextPONumber();
+    const po_number = await nextPONumber(conn);
 
     const poResult = await conn.query(
       'INSERT INTO purchase_orders (po_number, supplier_id, order_date, expected_date, total_amount, additional_charges, notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',

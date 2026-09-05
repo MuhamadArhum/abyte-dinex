@@ -100,10 +100,14 @@ exports.updateJobStatus = async (req, res) => {
       return res.status(400).json({ message: 'status must be done or failed' });
     }
 
-    await query(
+    const result = await query(
       `UPDATE print_queue SET status = ?, error_message = ?, processed_at = NOW() WHERE id = ?`,
       [status, error_message || null, id]
     );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
 
     res.json({ success: true });
   } catch (err) {

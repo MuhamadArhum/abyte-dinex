@@ -7,6 +7,7 @@
 
 const logger = require('../config/logger');
 const { query } = require('../config/database');
+const { logAction } = require('../services/auditService');
 
 const DEFAULTS = {
   company_name:         'Abyte Dinex',
@@ -96,6 +97,7 @@ exports.updateConfig = async (req, res) => {
 
     await query(`UPDATE store_settings SET ${fields.join(', ')} WHERE setting_id = 1`, vals);
 
+    await logAction(req.user.user_id, req.user.name, 'CONFIG_UPDATED', 'store_settings', 1, { fields: fields.map(f => f.split(' ')[0]) }, req.ip);
     res.json({ message: 'Config updated successfully' });
   } catch (err) {
     logger.error('updateConfig error:', err);

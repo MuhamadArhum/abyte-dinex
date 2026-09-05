@@ -11,16 +11,22 @@ const NEXT_NUMBER_WHITELIST = {
   raw_sales:           'sale_number',
 };
 
-async function nextNumber(prefix, table, column) {
+async function nextNumber(prefix, table, column, conn) {
   if (NEXT_NUMBER_WHITELIST[table] !== column) {
     throw new Error(`nextNumber: disallowed table/column: ${table}.${column}`);
   }
-  const [last] = await query(`SELECT ${column} FROM ${table} ORDER BY ${column} DESC LIMIT 1`);
-  if (last?.[column]) {
-    const m = last[column].match(/\d+$/);
-    if (m) return `${prefix}${pad(parseInt(m[0]) + 1)}`;
+  const lockName = `issuance_number_gen_${table}`;
+  await conn.query('SELECT GET_LOCK(?, 10)', [lockName]);
+  try {
+    const [last] = await conn.query(`SELECT ${column} FROM ${table} ORDER BY ${column} DESC LIMIT 1`);
+    if (last?.[column]) {
+      const m = last[column].match(/\d+$/);
+      if (m) return `${prefix}${pad(parseInt(m[0]) + 1)}`;
+    }
+    return `${prefix}${pad(1)}`;
+  } finally {
+    await conn.query('SELECT RELEASE_LOCK(?)', [lockName]);
   }
-  return `${prefix}${pad(1)}`;
 }
 
 // ==================== STOCK ISSUES ====================
@@ -86,7 +92,7 @@ exports.createIssue = async (req, res) => {
     }
 
     await conn.beginTransaction();
-    const issue_number = await nextNumber('ISS', 'stock_issues', 'issue_number');
+    const issue_number = await nextNumber('ISS', 'stock_issues', 'issue_number', conn);
 
     const result = await conn.query(
       'INSERT INTO stock_issues (issue_number, section_id, issue_date, notes, created_by) VALUES (?, ?, ?, ?, ?)',
@@ -235,7 +241,7 @@ exports.createReturn = async (req, res) => {
     }
 
     await conn.beginTransaction();
-    const return_number = await nextNumber('SIR', 'stock_issue_returns', 'return_number');
+    const return_number = await nextNumber('SIR', 'stock_issue_returns', 'return_number', conn);
 
     const result = await conn.query(
       'INSERT INTO stock_issue_returns (return_number, section_id, return_date, notes, created_by) VALUES (?, ?, ?, ?, ?)',
@@ -341,7 +347,7 @@ exports.createRawSale = async (req, res) => {
     }
 
     await conn.beginTransaction();
-    const sale_number = await nextNumber('RS', 'raw_sales', 'sale_number');
+    const sale_number = await nextNumber('RS', 'raw_sales', 'sale_number', conn);
     const total = items.reduce((s, i) => s + Number(i.quantity) * Number(i.unit_price), 0);
 
     const result = await conn.query(

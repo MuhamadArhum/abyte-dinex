@@ -1,4 +1,4 @@
-﻿const { query, queryDb } = require('../config/database');
+﻿const { query } = require('../config/database');
 const logger = require('../config/logger');
 const { logAction } = require('../services/auditService');
 const cache = require('../services/cacheService');
