@@ -1,5 +1,6 @@
 const logger = require('../config/logger');
 const { query } = require('../config/database');
+const { logAction } = require('../services/auditService');
 
 let tableSchemaEnsured = false;
 async function ensureTableSchema() {
@@ -30,7 +31,8 @@ exports.getTables = async (req, res) => {
     );
     res.json(tables);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    logger.error('Error in getTables:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -41,20 +43,26 @@ exports.createTable = async (req, res) => {
     if (!table_name || !table_name.trim()) {
       return res.status(400).json({ message: 'Table name is required' });
     }
+    const parsedCapacity = parseInt(capacity);
+    if (!parsedCapacity || parsedCapacity <= 0) {
+      return res.status(400).json({ message: 'Capacity must be a positive integer' });
+    }
     const result = await query(
       'INSERT INTO restaurant_tables (table_name, floor, capacity) VALUES (?, ?, ?)',
-      [table_name.trim(), floor || 'Main', parseInt(capacity) || 4]
+      [table_name.trim(), floor || 'Main', parsedCapacity]
     );
+    await logAction(req.user.user_id, req.user.name, 'TABLE_CREATED', 'restaurant_tables', Number(result.insertId), { table_name: table_name.trim(), floor: floor || 'Main', capacity: parsedCapacity }, req.ip);
     res.status(201).json({
       table_id: Number(result.insertId),
       table_name: table_name.trim(),
       floor: floor || 'Main',
-      capacity: parseInt(capacity) || 4,
+      capacity: parsedCapacity,
       status: 'available',
       has_pending_order: 0,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    logger.error('Error in createTable:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -65,16 +73,22 @@ exports.updateTable = async (req, res) => {
     if (!table_name || !table_name.trim()) {
       return res.status(400).json({ message: 'Table name is required' });
     }
+    const parsedCapacity = parseInt(capacity);
+    if (!parsedCapacity || parsedCapacity <= 0) {
+      return res.status(400).json({ message: 'Capacity must be a positive integer' });
+    }
     const result = await query(
       'UPDATE restaurant_tables SET table_name = ?, floor = ?, capacity = ? WHERE table_id = ?',
-      [table_name.trim(), floor || 'Main', parseInt(capacity) || 4, id]
+      [table_name.trim(), floor || 'Main', parsedCapacity, id]
     );
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'Table not found' });
     }
+    await logAction(req.user.user_id, req.user.name, 'TABLE_UPDATED', 'restaurant_tables', parseInt(id), { table_name: table_name.trim(), floor: floor || 'Main', capacity: parsedCapacity }, req.ip);
     res.json({ message: 'Table updated' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    logger.error('Error in updateTable:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -92,9 +106,11 @@ exports.updateStatus = async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'Table not found' });
     }
+    await logAction(req.user.user_id, req.user.name, 'TABLE_STATUS_CHANGED', 'restaurant_tables', parseInt(id), { status }, req.ip);
     res.json({ message: 'Table status updated', status });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    logger.error('Error in updateStatus:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -105,8 +121,10 @@ exports.deleteTable = async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'Table not found' });
     }
+    await logAction(req.user.user_id, req.user.name, 'TABLE_DELETED', 'restaurant_tables', parseInt(id), {}, req.ip);
     res.json({ message: 'Table deleted' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    logger.error('Error in deleteTable:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 };

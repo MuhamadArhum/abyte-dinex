@@ -108,6 +108,20 @@ const getById = async (req, res) => {
   }
 };
 
+async function nextQuotationNumber(conn) {
+  await conn.query("SELECT GET_LOCK('quotation_number_gen', 10)");
+  try {
+    const [last] = await conn.query('SELECT quotation_number FROM quotations ORDER BY quotation_id DESC LIMIT 1');
+    if (last?.quotation_number) {
+      const m = last.quotation_number.match(/\d+$/);
+      if (m) return `QT-${String(parseInt(m[0]) + 1).padStart(6, '0')}`;
+    }
+    return 'QT-000001';
+  } finally {
+    await conn.query("SELECT RELEASE_LOCK('quotation_number_gen')");
+  }
+}
+
 // POST /api/quotations
 const create = async (req, res) => {
   const conn = await getConnection();
@@ -122,7 +136,7 @@ const create = async (req, res) => {
       return res.status(400).json({ message: 'At least one item is required' });
     }
 
-    const quotation_number = `QT-${Date.now()}`;
+    const quotation_number = await nextQuotationNumber(conn);
     const subtotal = round2(items.reduce((sum, item) => sum + round2(item.unit_price * item.quantity), 0));
     const discountAmt = round2(discount || 0);
     const taxAmt = round2(tax_amount || 0);
