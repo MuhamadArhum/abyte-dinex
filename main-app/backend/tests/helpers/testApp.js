@@ -37,8 +37,6 @@ function buildTestApp() {
   app.use('/api/inventory',         require('../../routes/inventoryRoutes'));
   app.use('/api/suppliers',         require('../../routes/supplierRoutes'));
   app.use('/api/stock-adjustments', require('../../routes/stockAdjustmentRoutes'));
-  // HR
-  app.use('/api/staff',             require('../../routes/staffRoutes'));
   // Restaurant
   app.use('/api/restaurant/tables', require('../../routes/restaurantRoutes'));
 

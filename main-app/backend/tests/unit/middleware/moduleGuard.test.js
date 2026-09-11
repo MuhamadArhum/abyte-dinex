@@ -1,6 +1,7 @@
 const { requireModule, calculatePrice, getModuleList, getPlanModules, isModuleAllowed, MODULES } = require('../../../middleware/moduleGuard');
 
 // ─── requireModule ───────────────────────────────────────────────
+// Single-tenant: all modules enabled, requireModule is a no-op passthrough.
 
 describe('requireModule middleware', () => {
   let next, res;
@@ -10,7 +11,7 @@ describe('requireModule middleware', () => {
     res  = { status: jest.fn().mockReturnThis(), json: jest.fn() };
   });
 
-  it('passes through when req.modules is empty (single-client mode)', () => {
+  it('passes through when req.modules is empty', () => {
     const req = { modules: [] };
     requireModule('sales')(req, res, next);
     expect(next).toHaveBeenCalledTimes(1);
@@ -19,42 +20,22 @@ describe('requireModule middleware', () => {
 
   it('passes through when req.modules is missing', () => {
     const req = {};
-    requireModule('hr')(req, res, next);
+    requireModule('inventory')(req, res, next);
     expect(next).toHaveBeenCalledTimes(1);
   });
 
-  it('allows access when module is in req.modules', () => {
+  it('passes through regardless of the requested module', () => {
     const req = { modules: ['sales', 'inventory'] };
     requireModule('sales')(req, res, next);
     expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
   });
 
-  it('blocks access when module is NOT in req.modules', () => {
-    const req = { modules: ['sales', 'inventory'] };
-    requireModule('hr')(req, res, next);
-    expect(next).not.toHaveBeenCalled();
-    expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-      upgrade_required: true,
-      module: 'hr',
-    }));
-  });
-
-  it('returns module price in 403 response', () => {
-    const req = { modules: ['sales'] };
-    requireModule('accounts')(req, res, next);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-      price: MODULES.accounts.price,
-    }));
-  });
-
-  it('handles unknown module name gracefully', () => {
+  it('passes through for an unknown module name', () => {
     const req = { modules: ['sales'] };
     requireModule('nonexistent_module')(req, res, next);
-    expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-      price: null,
-    }));
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
   });
 });
 
@@ -65,15 +46,17 @@ describe('calculatePrice', () => {
     expect(calculatePrice([])).toBe(0);
   });
 
-  it('returns correct price for single module', () => {
+  it('returns correct price for a single module', () => {
     expect(calculatePrice(['sales'])).toBe(2250);
-    expect(calculatePrice(['accounts'])).toBe(2999);
-    expect(calculatePrice(['hr'])).toBe(2999);
+    expect(calculatePrice(['inventory'])).toBe(2250);
   });
 
   it('sums prices for multiple modules', () => {
     expect(calculatePrice(['sales', 'inventory'])).toBe(4500);
-    expect(calculatePrice(['sales', 'inventory', 'accounts', 'hr'])).toBe(10498);
+  });
+
+  it('counts unique parent modules only', () => {
+    expect(calculatePrice(['sales.pos', 'sales.returns', 'inventory'])).toBe(4500);
   });
 
   it('ignores unknown module keys', () => {
@@ -88,16 +71,13 @@ describe('calculatePrice', () => {
 // ─── getPlanModules ──────────────────────────────────────────────
 
 describe('getPlanModules', () => {
-  it('returns sales and inventory for basic plan', () => {
-    expect(getPlanModules('basic')).toEqual(['sales', 'inventory']);
+  it('returns sales and inventory for the standard plan', () => {
+    expect(getPlanModules('standard')).toEqual(['sales', 'inventory']);
   });
 
-  it('returns all four modules for enterprise plan', () => {
-    expect(getPlanModules('enterprise')).toEqual(['sales', 'inventory', 'accounts', 'hr']);
-  });
-
-  it('falls back to basic for unknown plan', () => {
+  it('falls back to standard for an unknown plan', () => {
     expect(getPlanModules('unknown')).toEqual(['sales', 'inventory']);
+    expect(getPlanModules()).toEqual(['sales', 'inventory']);
   });
 });
 
@@ -105,16 +85,16 @@ describe('getPlanModules', () => {
 
 describe('isModuleAllowed', () => {
   it('returns true when modulesEnabled is null/undefined', () => {
-    expect(isModuleAllowed(null, 'hr')).toBe(true);
-    expect(isModuleAllowed(undefined, 'hr')).toBe(true);
+    expect(isModuleAllowed(null, 'inventory')).toBe(true);
+    expect(isModuleAllowed(undefined, 'inventory')).toBe(true);
   });
 
   it('returns true when module is in the list', () => {
-    expect(isModuleAllowed(['sales', 'hr'], 'hr')).toBe(true);
+    expect(isModuleAllowed(['sales', 'inventory'], 'inventory')).toBe(true);
   });
 
   it('returns false when module is not in the list', () => {
-    expect(isModuleAllowed(['sales', 'inventory'], 'hr')).toBe(false);
+    expect(isModuleAllowed(['sales'], 'inventory')).toBe(false);
   });
 });
 
@@ -124,17 +104,21 @@ describe('getModuleList', () => {
   it('returns array of module objects', () => {
     const list = getModuleList();
     expect(Array.isArray(list)).toBe(true);
-    expect(list.length).toBe(4);
+    expect(list.length).toBe(2);
     expect(list[0]).toHaveProperty('key');
     expect(list[0]).toHaveProperty('price');
     expect(list[0]).toHaveProperty('name');
   });
 
-  it('includes all expected modules', () => {
+  it('includes exactly the sales and inventory modules', () => {
     const keys = getModuleList().map(m => m.key);
     expect(keys).toContain('sales');
     expect(keys).toContain('inventory');
-    expect(keys).toContain('accounts');
-    expect(keys).toContain('hr');
+    expect(keys).not.toContain('accounts');
+    expect(keys).not.toContain('hr');
+  });
+
+  it('matches the MODULES export', () => {
+    expect(Object.keys(MODULES).sort()).toEqual(['inventory', 'sales']);
   });
 });

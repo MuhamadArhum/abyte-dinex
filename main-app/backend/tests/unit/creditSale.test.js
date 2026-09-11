@@ -4,19 +4,21 @@
 //
 // create() uses getConnection() for a transaction.
 // getAll() uses Promise.all([query, query]).
+//
+// Single-tenant: the authenticate middleware also uses query() for its user
+// lookup, so every authenticated request consumes one query() call before
+// the controller's own queries — tests queue a value for that call first.
 
 jest.mock('../../config/database');
 jest.mock('../../services/tokenBlacklist');
 jest.mock('../../services/auditService', () => ({ logAction: jest.fn() }));
 jest.mock('../../config/logger', () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn(), http: jest.fn() }));
 
-process.env.JWT_SECRET     = 'test-secret-credit-sale-32-chars-long';
-process.env.DB_NAME        = 'test_db';
-process.env.MASTER_DB_NAME = 'test_master';
+process.env.JWT_SECRET = 'test-secret-credit-sale-32-chars-long';
 
 const request = require('supertest');
 const jwt     = require('jsonwebtoken');
-const { queryDb, query, getConnection, tenantStorage } = require('../../config/database');
+const { query, getConnection } = require('../../config/database');
 const { isBlacklisted } = require('../../services/tokenBlacklist');
 const { buildTestApp } = require('../helpers/testApp');
 
@@ -24,13 +26,16 @@ let app;
 
 const adminUser = {
   user_id: 1, name: 'Admin', email: 'admin@test.com',
-  role_name: 'Admin', branch_id: null, is_active: 1,
+  role_name: 'Admin', is_active: 1,
 };
 
 const makeToken = (role = 'Admin') =>
-  jwt.sign({ user_id: 1, tenant_db: 'test_db', modules: [], role_name: role }, process.env.JWT_SECRET);
+  jwt.sign({ user_id: 1, role_name: role }, process.env.JWT_SECRET);
 
 const authHeader = (role = 'Admin') => ({ Authorization: `Bearer ${makeToken(role)}` });
+
+// Queues the authenticate middleware's user lookup response (always the first query() call).
+const mockAuthLookup = () => query.mockResolvedValueOnce([adminUser]);
 
 // Build a mock DB connection suitable for transaction-based operations
 const makeConn = () => {
@@ -46,15 +51,12 @@ const makeConn = () => {
 };
 
 beforeAll(() => {
-  tenantStorage.run = jest.fn((db, fn) => fn());
   app = buildTestApp();
 });
 
 beforeEach(() => {
   // jest.config resetMocks:true resets all implementations before each test
-  tenantStorage.run = jest.fn((db, fn) => fn());
   isBlacklisted.mockResolvedValue(false);
-  queryDb.mockResolvedValue([adminUser]);
   query.mockResolvedValue([]);
 });
 
@@ -67,6 +69,7 @@ describe('GET /api/credit-sales', () => {
   });
 
   it('returns paginated credit sales list', async () => {
+    mockAuthLookup();
     const fakeSales = [
       { credit_sale_id: 1, customer_name: 'Alice', total_amount: 5000, balance_due: 3000, status: 'partial' },
       { credit_sale_id: 2, customer_name: 'Bob',   total_amount: 2000, balance_due: 2000, status: 'pending' },
@@ -86,6 +89,7 @@ describe('GET /api/credit-sales', () => {
   });
 
   it('returns 500 when database throws', async () => {
+    mockAuthLookup();
     query.mockRejectedValueOnce(new Error('DB connection lost'));
     const res = await request(app)
       .get('/api/credit-sales')
@@ -106,6 +110,7 @@ describe('POST /api/credit-sales', () => {
   });
 
   it('returns 400 when required fields are missing', async () => {
+    mockAuthLookup();
     // Missing due_date
     const res = await request(app)
       .post('/api/credit-sales')
@@ -116,6 +121,7 @@ describe('POST /api/credit-sales', () => {
   });
 
   it('returns 400 for walk-in customer (customer_id === 1)', async () => {
+    mockAuthLookup();
     const res = await request(app)
       .post('/api/credit-sales')
       .set(authHeader())
@@ -125,6 +131,7 @@ describe('POST /api/credit-sales', () => {
   });
 
   it('returns 404 when referenced sale does not exist', async () => {
+    mockAuthLookup();
     // First query: validate sale → not found
     query.mockResolvedValueOnce([]); // sale not found
     const res = await request(app)
@@ -136,6 +143,7 @@ describe('POST /api/credit-sales', () => {
   });
 
   it('returns 404 when customer does not exist', async () => {
+    mockAuthLookup();
     // First query: validate sale → found; second: validate customer → not found
     query
       .mockResolvedValueOnce([{ sale_id: 1, total_amount: 5000 }]) // sale exists
@@ -149,6 +157,7 @@ describe('POST /api/credit-sales', () => {
   });
 
   it('creates credit sale successfully and returns 201 with credit_sale_id', async () => {
+    mockAuthLookup();
     const conn = makeConn();
 
     // Pre-transaction queries (validate sale + customer)
@@ -174,6 +183,7 @@ describe('POST /api/credit-sales', () => {
   });
 
   it('creates credit sale with partial initial payment and inserts credit_payment row', async () => {
+    mockAuthLookup();
     const conn = makeConn();
 
     query
@@ -198,6 +208,7 @@ describe('POST /api/credit-sales', () => {
   });
 
   it('returns 500 and rolls back transaction when DB throws inside transaction', async () => {
+    mockAuthLookup();
     const conn = makeConn();
 
     query

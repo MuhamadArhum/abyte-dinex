@@ -1,5 +1,9 @@
 // Integration tests for /api/products routes
-// Note: productController uses `query` (not queryDb) for all DB ops
+// Note: productController AND the authenticate middleware both use `query`
+// (single-tenant — no queryDb/tenantStorage). Every authenticated request
+// triggers exactly one extra query() call first, for the authenticate
+// middleware's user lookup — tests must queue a value for that call before
+// queuing values for the controller's own queries.
 // Field name: `price` (not `selling_price`) per controller schema
 
 jest.mock('../../config/database');
@@ -7,34 +11,32 @@ jest.mock('../../services/tokenBlacklist');
 jest.mock('../../services/auditService', () => ({ logAction: jest.fn() }));
 jest.mock('../../config/logger', () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn(), http: jest.fn() }));
 
-process.env.JWT_SECRET     = 'test-secret-products';
-process.env.DB_NAME        = 'test_db';
-process.env.MASTER_DB_NAME = 'test_master';
+process.env.JWT_SECRET = 'test-secret-products';
 
 const request  = require('supertest');
 const jwt      = require('jsonwebtoken');
-const { queryDb, query, tenantStorage } = require('../../config/database');
+const { query } = require('../../config/database');
 const { isBlacklisted } = require('../../services/tokenBlacklist');
 const { buildTestApp } = require('../helpers/testApp');
 
 let app;
-const adminUser = { user_id: 1, name: 'Admin', email: 'a@a.com', role_name: 'Admin', branch_id: null, is_active: 1 };
+const adminUser = { user_id: 1, name: 'Admin', email: 'a@a.com', role_name: 'Admin', is_active: 1 };
 
-const makeToken = (role = 'Admin', modules = []) =>
-  jwt.sign({ user_id: 1, tenant_db: 'test_db', modules, role_name: role }, process.env.JWT_SECRET);
+const makeToken = (role = 'Admin') =>
+  jwt.sign({ user_id: 1, role_name: role }, process.env.JWT_SECRET);
 
 const authHeader = (role = 'Admin') => ({ Authorization: `Bearer ${makeToken(role)}` });
 
+// Queues the authenticate middleware's user lookup response (always the first query() call).
+const mockAuthLookup = () => query.mockResolvedValueOnce([adminUser]);
+
 beforeAll(() => {
-  tenantStorage.run = jest.fn((db, fn) => fn());
   app = buildTestApp();
 });
 
 beforeEach(() => {
   // resetMocks: true in jest.config resets all implementations before each test
-  tenantStorage.run = jest.fn((db, fn) => fn());
   isBlacklisted.mockResolvedValue(false);
-  queryDb.mockResolvedValue([adminUser]);
   query.mockResolvedValue([]);
 });
 
@@ -47,6 +49,7 @@ describe('GET /api/products', () => {
   });
 
   it('returns data array without pagination when page/limit not provided', async () => {
+    mockAuthLookup();
     query.mockResolvedValueOnce([]); // main SELECT (no page/limit = single query)
     const res = await request(app)
       .get('/api/products')
@@ -57,6 +60,7 @@ describe('GET /api/products', () => {
   });
 
   it('returns paginated response with pagination object when page+limit given', async () => {
+    mockAuthLookup();
     query
       .mockResolvedValueOnce([{ total: 50 }]) // COUNT query
       .mockResolvedValueOnce([]);              // data query
@@ -72,6 +76,7 @@ describe('GET /api/products', () => {
   });
 
   it('includes products in data array', async () => {
+    mockAuthLookup();
     const products = [
       { product_id: 1, product_name: 'Chai', price: 50 },
       { product_id: 2, product_name: 'Samosa', price: 30 },
@@ -92,6 +97,7 @@ describe('GET /api/products', () => {
 
 describe('GET /api/products/:id', () => {
   it('returns 404 when product does not exist', async () => {
+    mockAuthLookup();
     query.mockResolvedValueOnce([]); // product not found
     const res = await request(app)
       .get('/api/products/999')
@@ -100,9 +106,8 @@ describe('GET /api/products/:id', () => {
   });
 
   it('returns product data with 200 when found', async () => {
-    query
-      .mockResolvedValueOnce([{ product_id: 1, product_name: 'Milk', price: 120 }])
-      .mockResolvedValueOnce([]); // variants
+    mockAuthLookup();
+    query.mockResolvedValueOnce([{ product_id: 1, product_name: 'Milk', price: 120, has_variants: 0 }]);
     const res = await request(app)
       .get('/api/products/1')
       .set(authHeader());
@@ -121,6 +126,7 @@ describe('POST /api/products', () => {
   });
 
   it('returns 400 when product_name is missing', async () => {
+    mockAuthLookup();
     const res = await request(app)
       .post('/api/products')
       .set(authHeader())
@@ -130,6 +136,7 @@ describe('POST /api/products', () => {
   });
 
   it('returns 400 when price is missing for finished goods', async () => {
+    mockAuthLookup();
     const res = await request(app)
       .post('/api/products')
       .set(authHeader())
@@ -139,6 +146,7 @@ describe('POST /api/products', () => {
   });
 
   it('creates product and returns 201 with product_id', async () => {
+    mockAuthLookup();
     // create calls: INSERT products → INSERT inventory
     query
       .mockResolvedValueOnce({ insertId: 42 })  // INSERT products
@@ -153,6 +161,7 @@ describe('POST /api/products', () => {
   });
 
   it('returns 400 when barcode uniqueness is violated (ER_DUP_ENTRY)', async () => {
+    mockAuthLookup();
     // Simulate MySQL duplicate key error
     const dupError = new Error('Duplicate entry');
     dupError.code = 'ER_DUP_ENTRY';
@@ -184,6 +193,7 @@ describe('DELETE /api/products/:id', () => {
   });
 
   it('returns 400 when product has sales history', async () => {
+    mockAuthLookup();
     // delete flow: SELECT sale_details (has rows) → 400
     query.mockResolvedValueOnce([{ sale_detail_id: 99 }]);
     const res = await request(app)
@@ -194,6 +204,7 @@ describe('DELETE /api/products/:id', () => {
   });
 
   it('deletes product when no sales history exists', async () => {
+    mockAuthLookup();
     // delete flow: SELECT sale_details (empty) → SELECT product → DELETE inventory → DELETE product
     query
       .mockResolvedValueOnce([])                       // no sales history

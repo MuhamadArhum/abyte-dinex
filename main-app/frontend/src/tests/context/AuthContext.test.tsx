@@ -43,10 +43,10 @@ describe('AuthProvider - initial state (no stored token)', () => {
     });
   });
 
-  it('defaults currentPlan to free when modules empty', async () => {
+  it('currentPlan is always enterprise (single-tenant: all modules active)', async () => {
     render(<AuthProvider><AuthConsumer /></AuthProvider>);
     await waitFor(() => {
-      expect(screen.getByTestId('plan').textContent).toBe('free');
+      expect(screen.getByTestId('plan').textContent).toBe('enterprise');
     });
   });
 
@@ -128,7 +128,7 @@ describe('login and logout', () => {
     expect(screen.getByTestId('is-admin').textContent).toBe('true');
   });
 
-  it('sets currentPlan to active when modules provided', async () => {
+  it('currentPlan stays enterprise after login', async () => {
     render(<AuthProvider><AuthConsumer /></AuthProvider>);
     await waitFor(() => screen.getByTestId('authenticated'));
 
@@ -136,7 +136,7 @@ describe('login and logout', () => {
       await userEvent.click(screen.getByText('login'));
     });
 
-    expect(screen.getByTestId('plan').textContent).toBe('active');
+    expect(screen.getByTestId('plan').textContent).toBe('enterprise');
   });
 });
 
@@ -237,18 +237,18 @@ describe('hasModule', () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) });
   });
 
-  it('returns true for subscribed module', async () => {
+  it('returns true for a module in the list', async () => {
     render(<AuthProvider><ModuleConsumer moduleName="sales" /></AuthProvider>);
     await waitFor(() => screen.getByText('login'));
     await act(async () => { await userEvent.click(screen.getByText('login')); });
     expect(screen.getByTestId('has-module').textContent).toBe('true');
   });
 
-  it('returns false for unsubscribed module', async () => {
+  it('returns true even for a module not in the list (single-tenant: no module gating)', async () => {
     render(<AuthProvider><ModuleConsumer moduleName="hr" /></AuthProvider>);
     await waitFor(() => screen.getByText('login'));
     await act(async () => { await userEvent.click(screen.getByText('login')); });
-    expect(screen.getByTestId('has-module').textContent).toBe('false');
+    expect(screen.getByTestId('has-module').textContent).toBe('true');
   });
 
   it('returns true for all modules when modules list is empty (fallback)', async () => {
