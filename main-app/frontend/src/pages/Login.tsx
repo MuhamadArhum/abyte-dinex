@@ -249,6 +249,7 @@ const Login = () => {
                   onChange={e => setEmail(e.target.value)}
                   className="w-full pl-11 pr-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:ring-0 focus:border-emerald-500 outline-none transition-all duration-200 text-gray-800 placeholder-gray-400 text-sm"
                   placeholder="name@company.com"
+                  tabIndex={1}
                   required
                 />
               </div>
@@ -258,7 +259,7 @@ const Login = () => {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-semibold text-gray-700">Password</label>
-                <Link to="/forgot-password" className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold transition">Forgot password?</Link>
+                <Link to="/forgot-password" tabIndex={3} className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold transition">Forgot password?</Link>
               </div>
               <div className="relative group">
                 <Lock
@@ -271,6 +272,7 @@ const Login = () => {
                   onChange={e => setPassword(e.target.value)}
                   className="w-full pl-11 pr-12 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:ring-0 focus:border-emerald-500 outline-none transition-all duration-200 text-gray-800 placeholder-gray-400 text-sm"
                   placeholder="Enter your password"
+                  tabIndex={2}
                   required
                 />
                 <button

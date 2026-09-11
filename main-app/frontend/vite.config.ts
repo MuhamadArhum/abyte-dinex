@@ -64,10 +64,10 @@ export default defineConfig({
   },
   server: {
     host: 'localhost',
-    port: 5173,
+    port: 5175,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:3004',
         changeOrigin: false,
       }
     }
@@ -100,7 +100,6 @@ export default defineConfig({
             './src/pages/inventory/Inventory',
             './src/pages/inventory/InventoryReports',
             './src/pages/inventory/StockAdjustments',
-            './src/pages/inventory/StockTransfers',
             './src/pages/inventory/StockCount',
             './src/pages/inventory/PurchaseOrders',
             './src/pages/inventory/Bundles',
