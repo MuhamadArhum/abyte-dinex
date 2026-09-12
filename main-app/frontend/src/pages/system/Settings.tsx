@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import QRCode from 'react-qr-code';
+import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
 import {
   Save,
@@ -42,39 +41,18 @@ import {
   ImageOff,
   MessageCircle,
   FileCheck,
-  Smartphone,
-  Wifi,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
 import { useToast } from '../../components/Toast';
 
 
-interface User {
-  user_id: number;
-  username: string;
-  name: string;
-  email: string;
-  role: string;
-  role_id: number;
-  branch_id: number | null;
-  branch_name: string | null;
-  created_at: string;
-}
 
 const Settings = () => {
   const { user: currentUser } = useAuth();
   const { refreshSettings } = useSettings();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('store');
-  const [qrCopied, setQrCopied] = useState(false);
-
-  // Auto-detect server URL for Waiter App QR
-  const waiterApiUrl = useMemo(() => {
-    const host = window.location.hostname;
-    return `http://${host}:5000/api`;
-  }, []);
-  const waiterQrPayload = JSON.stringify({ url: waiterApiUrl, app: 'abyte-waiter' });
 
   // All settings from DB
   const [settings, setSettings] = useState<any>({
@@ -137,23 +115,6 @@ const Settings = () => {
 
   // Accounting accounts (for CPV/CRV defaults)
   const [accountsList, setAccountsList] = useState<any[]>([]);
-
-  // Roles
-  interface Role { role_id: number; role_name: string; }
-  interface Branch { store_id: number; store_name: string; }
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [newRoleName, setNewRoleName] = useState('');
-  const [roleError, setRoleError] = useState('');
-  const [roleSaving, setRoleSaving] = useState(false);
-
-  // Users
-  const [users, setUsers] = useState<User[]>([]);
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [userForm, setUserForm] = useState({ username: '', name: '', email: '', password: '', role_id: 0, branch_id: '' as string });
-  const [showUserPassword, setShowUserPassword] = useState(false);
 
   // Password
   const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
@@ -259,11 +220,6 @@ const Settings = () => {
 
   useEffect(() => {
     fetchSettings();
-    if (currentUser?.role_name === 'Admin') {
-      fetchUsers();
-      fetchRoles();
-      fetchBranches();
-    }
     api.get('/accounting/accounts', { params: { tree: 1 } })
       .then(r => setAccountsList((r.data.data || []).filter((a: any) => a.is_active && a.level === 4)))
       .catch(() => {});
@@ -291,33 +247,6 @@ const Settings = () => {
     }
   };
 
-  const fetchUsers = async () => {
-    try {
-      const res = await api.get('/users');
-      setUsers(res.data.data || []);
-    } catch (err) {
-      console.error('Failed to load users', err);
-    }
-  };
-
-  const fetchRoles = async () => {
-    try {
-      const res = await api.get('/users/roles');
-      setRoles(res.data.data || []);
-    } catch (err) {
-      console.error('Failed to load roles', err);
-    }
-  };
-
-  const fetchBranches = async () => {
-    try {
-      const res = await api.get('/stores');
-      setBranches((res.data.data || []).filter((s: any) => s.is_active !== 0));
-    } catch (err) {
-      console.error('Failed to load branches', err);
-    }
-  };
-
   const fetchSystemInfo = async () => {
     try {
       const res = await api.get('/settings/system-info');
@@ -339,78 +268,6 @@ const Settings = () => {
       toast.error('Failed to save settings');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleUserSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const selectedRoleName = roles.find(r => r.role_id === userForm.role_id)?.role_name ?? '';
-    if (selectedRoleName !== 'Admin' && !userForm.branch_id) {
-      toast.error('Branch is required for non-admin users');
-      return;
-    }
-    setSaving(true);
-    try {
-      const branch_id = selectedRoleName === 'Admin' ? null : Number(userForm.branch_id);
-      if (editingUser) {
-        const payload: any = { username: userForm.username, name: userForm.name, email: userForm.email, role_id: userForm.role_id, branch_id };
-        if (userForm.password) payload.password = userForm.password;
-        await api.put(`/users/${editingUser.user_id}`, payload);
-        toast.success('User updated');
-      } else {
-        const payload: any = { ...userForm, branch_id };
-        await api.post('/users', payload);
-        toast.success('User created');
-      }
-      setShowUserModal(false);
-      setEditingUser(null);
-      const defaultRoleId = roles.find(r => r.role_name === 'Cashier')?.role_id || roles.find(r => r.role_name !== 'Admin')?.role_id || 0;
-      setUserForm({ username: '', name: '', email: '', password: '', role_id: defaultRoleId, branch_id: '' });
-      setShowUserPassword(false);
-      fetchUsers();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to save user');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeleteUser = async (userId: number) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-    try {
-      await api.delete(`/users/${userId}`);
-      toast.success('User deleted');
-      fetchUsers();
-    } catch (err) {
-      toast.error('Failed to delete user');
-    }
-  };
-
-  const handleCreateRole = async () => {
-    setRoleError('');
-    if (!newRoleName.trim()) return setRoleError('Role name is required');
-    setRoleSaving(true);
-    try {
-      await api.post('/users/roles', { role_name: newRoleName.trim() });
-      toast.success(`Role "${newRoleName.trim()}" created`);
-      setShowRoleModal(false);
-      setNewRoleName('');
-      fetchRoles();
-    } catch (err: any) {
-      setRoleError(err.response?.data?.message || 'Failed to create role');
-    } finally {
-      setRoleSaving(false);
-    }
-  };
-
-  const handleDeleteRole = async (roleId: number, roleName: string) => {
-    if (!confirm(`Delete role "${roleName}"? This cannot be undone.`)) return;
-    try {
-      await api.delete(`/users/roles/${roleId}`);
-      toast.success(`Role "${roleName}" deleted`);
-      fetchRoles();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to delete role');
     }
   };
 
@@ -437,18 +294,6 @@ const Settings = () => {
     } finally {
       setSaving(false);
     }
-  };
-
-  const openUserModal = (user?: User) => {
-    const defaultRoleId = roles.find(r => r.role_name === 'Cashier')?.role_id || roles.find(r => r.role_name !== 'Admin')?.role_id || 0;
-    if (user) {
-      setEditingUser(user);
-      setUserForm({ username: user.username, name: user.name, email: user.email, password: '', role_id: user.role_id, branch_id: user.branch_id ? String(user.branch_id) : '' });
-    } else {
-      setEditingUser(null);
-      setUserForm({ username: '', name: '', email: '', password: '', role_id: defaultRoleId, branch_id: '' });
-    }
-    setShowUserModal(true);
   };
 
   const formatUptime = (seconds: number) => {
@@ -545,11 +390,9 @@ const Settings = () => {
     { id: 'store',      name: 'Store Info',       icon: Building2 },
     { id: 'receipt',    name: 'Receipt & Invoice', icon: Receipt },
     { id: 'pos',        name: 'POS Settings',      icon: ShoppingCart },
-    { id: 'users',      name: 'Users',             icon: Users,       adminOnly: true },
     { id: 'printer',    name: 'Printer',           icon: Printer,     adminOnly: true },
     { id: 'security',   name: 'Security',          icon: Shield },
     { id: 'integrations', name: 'WhatsApp & FBR',   icon: MessageCircle, adminOnly: true },
-    { id: 'waiter',     name: 'Waiter App',        icon: Smartphone,  adminOnly: true },
     { id: 'system',     name: 'System',            icon: Server,      adminOnly: true },
   ];
 
@@ -1349,116 +1192,6 @@ const Settings = () => {
             </div>
           )}
 
-          {/* ========== USERS TAB ========== */}
-          {activeTab === 'users' && currentUser?.role_name === 'Admin' && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-base font-semibold text-gray-800">User Management</h2>
-                <button onClick={() => openUserModal()}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition font-semibold shadow-sm">
-                  <Plus size={18} /> Add User
-                </button>
-              </div>
-
-              {/* Stats Cards */}
-              <div className="flex flex-wrap gap-3 mb-6">
-                {roles.map((r, i) => {
-                  const count = users.filter(u => u.role === r.role_name).length;
-                  const palette = ['bg-red-100 text-red-700','bg-blue-100 text-blue-700','bg-emerald-100 text-emerald-700','bg-purple-100 text-purple-700','bg-amber-100 text-amber-700'];
-                  return (
-                    <div key={r.role_id} className="flex-1 min-w-28 p-4 bg-gray-50 rounded-xl border border-gray-200 text-center">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${palette[i % palette.length]}`}>{r.role_name}</span>
-                      <p className="text-2xl font-bold text-gray-800 mt-2">{count}</p>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Manage Roles */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2"><Shield size={14} /> Roles</h3>
-                  <button onClick={() => { setNewRoleName(''); setRoleError(''); setShowRoleModal(true); }}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition">
-                    <Plus size={13} /> New Role
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {roles.map(r => {
-                    const BUILT_IN = ['Admin', 'Manager', 'Cashier'];
-                    return (
-                      <span key={r.role_id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-gray-200 rounded-full text-sm text-gray-700">
-                        {r.role_name}
-                        {!BUILT_IN.includes(r.role_name) && (
-                          <button onClick={() => handleDeleteRole(r.role_id, r.role_name)}
-                            className="text-red-400 hover:text-red-600 transition ml-0.5" title="Delete role">
-                            <X size={12} />
-                          </button>
-                        )}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="overflow-x-auto rounded-lg border border-gray-200">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Username</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Role</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Joined</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {users.map(user => (
-                      <tr key={user.user_id} className="hover:bg-gray-50 transition">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold text-sm">
-                              {user.name.charAt(0).toUpperCase()}
-                            </div>
-                            <span className="font-medium text-gray-800">{user.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-gray-500 text-sm font-mono">{user.username}</td>
-                        <td className="px-6 py-4 text-gray-600">{user.email}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${user.role === 'Admin' ? 'bg-emerald-100 text-emerald-700'
-                              : user.role === 'Manager' ? 'bg-emerald-100 text-emerald-700'
-                                : 'bg-gray-100 text-gray-700'
-                            }`}>
-                            {user.role}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          {new Date(user.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex gap-2">
-                            <button onClick={() => openUserModal(user)}
-                              className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition" title="Edit">
-                              <Edit size={16} />
-                            </button>
-                            {user.user_id !== currentUser?.user_id && (
-                              <button onClick={() => handleDeleteUser(user.user_id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition" title="Delete">
-                                <Trash2 size={16} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
           {/* ========== SECURITY TAB ========== */}
           {activeTab === 'security' && (
             <div className="space-y-8">
@@ -1952,70 +1685,7 @@ const Settings = () => {
           )}
 
           {/* ========== WAITER APP TAB ========== */}
-          {activeTab === 'waiter' && currentUser?.role_name === 'Admin' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-base font-semibold text-gray-800 mb-1">Waiter App Connection</h2>
-                <p className="text-sm text-gray-500">Scan this QR code from the Waiter App to connect it to this server automatically.</p>
-              </div>
 
-              <div className="flex flex-col md:flex-row gap-6">
-                {/* QR Code Card */}
-                <div className="flex-1 bg-white border-2 border-emerald-200 rounded-2xl p-6 flex flex-col items-center gap-4">
-                  <div className="flex items-center gap-2 text-emerald-700 font-semibold text-sm">
-                    <Wifi size={16} />
-                    Connection QR Code
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                    <QRCode value={waiterQrPayload} size={200} level="M" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-gray-500 mb-1">Server URL</p>
-                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                      <code className="text-xs text-emerald-700 font-mono">{waiterApiUrl}</code>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(waiterApiUrl);
-                          setQrCopied(true);
-                          setTimeout(() => setQrCopied(false), 2000);
-                        }}
-                        className="text-gray-400 hover:text-emerald-600 transition-colors flex-shrink-0"
-                        title="Copy URL"
-                      >
-                        {qrCopied ? <CheckCircle size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Instructions Card */}
-                <div className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl p-6 space-y-4">
-                  <div className="flex items-center gap-2 text-gray-700 font-semibold text-sm">
-                    <Smartphone size={16} />
-                    How to Connect
-                  </div>
-                  {[
-                    { step: '1', text: 'Make sure the Waiter\'s phone is connected to the same WiFi as this server.' },
-                    { step: '2', text: 'Open the Waiter App on the phone.' },
-                    { step: '3', text: 'On the setup screen, tap "Scan QR Code".' },
-                    { step: '4', text: 'Point the camera at the QR code on the left.' },
-                    { step: '5', text: 'App will auto-configure and go to the login screen.' },
-                  ].map(({ step, text }) => (
-                    <div key={step} className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                        {step}
-                      </div>
-                      <p className="text-sm text-gray-600">{text}</p>
-                    </div>
-                  ))}
-                  <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                    <p className="text-xs text-amber-700 font-medium">Manual entry fallback</p>
-                    <p className="text-xs text-amber-600 mt-1">If QR scan doesn't work, tap "Enter IP Manually" in the app and type the Server URL shown above.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* ========== SYSTEM TAB ========== */}
           {activeTab === 'system' && currentUser?.role_name === 'Admin' && (
@@ -2142,160 +1812,6 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* User Modal */}
-      {showUserModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-800">
-                {editingUser ? 'Edit User' : 'Add New User'}
-              </h3>
-              <button onClick={() => { setShowUserModal(false); setEditingUser(null); setShowUserPassword(false); }}
-                className="text-gray-400 hover:text-gray-600">
-                <X size={24} />
-              </button>
-            </div>
-
-            <form onSubmit={handleUserSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Username <span className="text-red-500">*</span></label>
-                <input type="text" value={userForm.username}
-                  onChange={e => setUserForm({ ...userForm, username: e.target.value })}
-                  placeholder="e.g. john_cashier"
-                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none" required />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name <span className="text-red-500">*</span></label>
-                <input type="text" value={userForm.name}
-                  onChange={e => setUserForm({ ...userForm, name: e.target.value })}
-                  placeholder="e.g. John Smith"
-                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none" required />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Email <span className="text-red-500">*</span></label>
-                <input type="email" value={userForm.email}
-                  onChange={e => setUserForm({ ...userForm, email: e.target.value })}
-                  placeholder="e.g. john@store.com"
-                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none" required />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Password {editingUser ? <span className="text-gray-400 font-normal">(blank = keep current)</span> : <span className="text-red-500">*</span>}
-                </label>
-                <div className="relative">
-                  <input type={showUserPassword ? 'text' : 'password'} value={userForm.password}
-                    onChange={e => setUserForm({ ...userForm, password: e.target.value })}
-                    placeholder="Min 8 characters"
-                    className="w-full px-4 pr-12 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                    required={!editingUser} minLength={editingUser ? undefined : 8} />
-                  <button type="button" onClick={() => setShowUserPassword(!showUserPassword)}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">
-                    {showUserPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                {userForm.password && userForm.password.length < 8 && (
-                  <p className="text-xs text-red-500 mt-1">Password must be at least 8 characters</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Role <span className="text-red-500">*</span></label>
-                <select value={userForm.role_id}
-                  onChange={e => setUserForm({ ...userForm, role_id: parseInt(e.target.value), branch_id: '' })}
-                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
-                  {roles.map(r => (
-                    <option key={r.role_id} value={r.role_id}>{r.role_name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Branch selection — required for non-Admin roles */}
-              {(() => {
-                const selectedRoleName = roles.find(r => r.role_id === userForm.role_id)?.role_name ?? '';
-                if (!selectedRoleName || selectedRoleName === 'Admin') {
-                  return selectedRoleName === 'Admin' ? (
-                    <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs text-blue-600">
-                      Admin users have access to all branches and cannot be restricted to a single branch.
-                    </div>
-                  ) : null;
-                }
-                return (
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Assign Branch <span className="text-red-500">*</span>
-                    </label>
-                    {branches.length === 0 ? (
-                      <div className="w-full border border-red-200 rounded-lg px-3 py-2 text-sm text-red-500 bg-red-50">
-                        No active branches found. Please create a branch first.
-                      </div>
-                    ) : (
-                      <select
-                        value={userForm.branch_id}
-                        onChange={e => setUserForm({ ...userForm, branch_id: e.target.value })}
-                        className={`w-full px-4 py-2.5 border-2 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none ${!userForm.branch_id ? 'border-red-300' : 'border-gray-200'}`}
-                      >
-                        <option value="">— Select branch —</option>
-                        {branches.map(b => (
-                          <option key={b.store_id} value={b.store_id}>{b.store_name}</option>
-                        ))}
-                      </select>
-                    )}
-                    <p className="text-xs text-gray-400 mt-1">User will only see data for this branch.</p>
-                  </div>
-                );
-              })()}
-
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => { setShowUserModal(false); setEditingUser(null); setShowUserPassword(false); }}
-                  className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold transition">
-                  Cancel
-                </button>
-                <button type="submit" disabled={saving}
-                  className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold transition disabled:opacity-50 shadow-lg">
-                  {saving ? <Loader2 className="animate-spin mx-auto" size={20} /> : (editingUser ? 'Update' : 'Create')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* New Role Modal */}
-      {showRoleModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Shield size={16} /> Create New Role</h3>
-              <button onClick={() => setShowRoleModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
-            </div>
-            <div className="p-5 space-y-4">
-              {roleError && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">{roleError}</div>}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Role Name <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  value={newRoleName}
-                  onChange={e => setNewRoleName(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleCreateRole()}
-                  placeholder="e.g. Supervisor, Accountant"
-                  autoFocus
-                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                />
-                <p className="text-xs text-gray-400 mt-1">Built-in roles (Admin, Manager, Cashier) cannot be deleted.</p>
-              </div>
-            </div>
-            <div className="flex gap-3 p-5 border-t border-gray-100">
-              <button onClick={() => setShowRoleModal(false)}
-                className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold transition">
-                Cancel
-              </button>
-              <button onClick={handleCreateRole} disabled={roleSaving}
-                className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold transition disabled:opacity-50">
-                {roleSaving ? <Loader2 className="animate-spin mx-auto" size={18} /> : 'Create Role'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );

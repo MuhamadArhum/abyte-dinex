@@ -59,4 +59,7 @@ router.delete('/logo', authorize('Admin'), settingsController.deleteLogo);
 // System info: Admin only
 router.get('/system-info', authorize('Admin'), settingsController.getSystemInfo);
 
+// Server LAN IP + port (for Waiter App QR connection): Admin only
+router.get('/server-ip', authorize('Admin'), settingsController.getServerIp);
+
 module.exports = router;

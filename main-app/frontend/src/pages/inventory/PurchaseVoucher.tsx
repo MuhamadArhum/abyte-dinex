@@ -40,7 +40,7 @@ const AccountSelector = ({
   return (
     <div ref={ref} className="relative">
       <button type="button" onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-left transition">
+        className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-left transition">
         <span className={selected ? 'text-gray-900 font-medium truncate' : 'text-gray-400'}>
           {selected ? `${selected.account_code} — ${selected.account_name}` : placeholder}
         </span>
@@ -69,7 +69,7 @@ const AccountSelector = ({
               : filtered.map((a, idx) => (
                 <li key={a.account_id}>
                   <button type="button" onClick={() => select(String(a.account_id))}
-                    className={`w-full text-left px-3 py-2 flex items-center gap-2 text-sm transition ${idx === hi ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-gray-50'}`}>
+                    className={`w-full text-left px-3 py-2 flex items-center gap-2 text-sm transition ${idx === hi ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-50'}`}>
                     <span className="font-mono text-xs text-gray-400 shrink-0">{a.account_code}</span>
                     <span className="text-gray-800 truncate">{a.account_name}</span>
                   </button>
@@ -318,12 +318,12 @@ const PurchaseVoucher = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <ShoppingCart size={20} className="text-indigo-600" /> Purchase Voucher
+            <ShoppingCart size={20} className="text-emerald-600" /> Purchase Voucher
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">Receive goods and post double-entry journal via Level 4 accounts</p>
         </div>
         <button onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+          className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium">
           <Plus size={18} /> <span className="hidden sm:inline">New Voucher</span>
         </button>
       </div>
@@ -345,11 +345,11 @@ const PurchaseVoucher = () => {
               {!editingPV && (
                 <div className="flex gap-2">
                   <button onClick={() => { setMode('manual'); setSelectedPO(''); setItems([]); }}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium border ${mode === 'manual' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>
+                    className={`px-4 py-2 rounded-lg text-sm font-medium border ${mode === 'manual' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>
                     Manual Entry
                   </button>
                   <button onClick={() => setMode('po')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium border ${mode === 'po' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>
+                    className={`px-4 py-2 rounded-lg text-sm font-medium border ${mode === 'po' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>
                     From Purchase Order
                   </button>
                 </div>
@@ -359,7 +359,7 @@ const PurchaseVoucher = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Select Purchase Order *</label>
                   <select value={selectedPO} onChange={e => { setSelectedPO(e.target.value); loadPOItems(e.target.value); }}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
                     <option value="">— Select PO —</option>
                     {pos.map(p => <option key={p.po_id} value={p.po_id}>{p.po_number} — {p.supplier_name}</option>)}
                   </select>
@@ -367,10 +367,10 @@ const PurchaseVoucher = () => {
               )}
 
               {/* ── Double-Entry Accounts ─────────────────────────────── */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
                 <div>
-                  <label className="block text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1.5">
-                    Purchase Account <span className="bg-indigo-200 text-indigo-800 px-1.5 py-0.5 rounded text-xs ml-1">DR</span>
+                  <label className="block text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-1.5">
+                    Purchase Account <span className="bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded text-xs ml-1">DR</span>
                   </label>
                   <AccountSelector
                     value={formPurchaseAccountId}
@@ -378,10 +378,10 @@ const PurchaseVoucher = () => {
                     accounts={accounts}
                     placeholder="Select Purchase Account…"
                   />
-                  <p className="text-xs text-indigo-500 mt-1">e.g. Purchases, Inventory Expense</p>
+                  <p className="text-xs text-emerald-500 mt-1">e.g. Purchases, Inventory Expense</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1.5">
+                  <label className="block text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-1.5">
                     Supplier Account <span className="bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded text-xs ml-1">CR</span>
                   </label>
                   <AccountSelector
@@ -390,7 +390,7 @@ const PurchaseVoucher = () => {
                     accounts={accounts}
                     placeholder="Select Supplier Account…"
                   />
-                  <p className="text-xs text-indigo-500 mt-1">e.g. Accounts Payable, Supplier A</p>
+                  <p className="text-xs text-emerald-500 mt-1">e.g. Accounts Payable, Supplier A</p>
                 </div>
               </div>
 
@@ -399,7 +399,7 @@ const PurchaseVoucher = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Voucher Date *</label>
                   <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
@@ -425,13 +425,13 @@ const PurchaseVoucher = () => {
                         else if (e.key === 'Escape') { setProductResults([]); setProductSearch(''); }
                       }}
                       placeholder="Search by name or barcode…"
-                      className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                      className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none" />
                   </div>
                   {productResults.length > 0 && (
                     <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
                       {productResults.map((p, idx) => (
                         <button key={p.product_id} onClick={() => addItem(p)}
-                          className={`w-full text-left px-4 py-2.5 text-sm border-b last:border-0 ${idx === productSearchHi ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-gray-50'}`}>
+                          className={`w-full text-left px-4 py-2.5 text-sm border-b last:border-0 ${idx === productSearchHi ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-50'}`}>
                           {p.product_name}
                           {p.barcode && <span className="text-gray-400 ml-2 text-xs">{p.barcode}</span>}
                         </button>
@@ -487,9 +487,9 @@ const PurchaseVoucher = () => {
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Charges, Discount & Tax</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-3">
                   {[
-                    { label: 'Shipping Cost', value: formShipping, set: setFormShipping, cls: 'focus:ring-indigo-500 border-gray-300' },
-                    { label: 'Extra Charges', value: formExtra,    set: setFormExtra,    cls: 'focus:ring-indigo-500 border-gray-300' },
-                    { label: 'Other Charges', value: formOther,    set: setFormOther,    cls: 'focus:ring-indigo-500 border-gray-300' },
+                    { label: 'Shipping Cost', value: formShipping, set: setFormShipping, cls: 'focus:ring-emerald-500 border-gray-300' },
+                    { label: 'Extra Charges', value: formExtra,    set: setFormExtra,    cls: 'focus:ring-emerald-500 border-gray-300' },
+                    { label: 'Other Charges', value: formOther,    set: setFormOther,    cls: 'focus:ring-emerald-500 border-gray-300' },
                     { label: 'Discount %',    value: formDiscountPct, set: setFormDiscountPct, cls: 'focus:ring-red-400 border-red-200' },
                     { label: 'Tax %',         value: formTaxPct,   set: setFormTaxPct,   cls: 'focus:ring-blue-400 border-blue-200' },
                   ].map(f => (
@@ -518,7 +518,7 @@ const PurchaseVoucher = () => {
                     </div>
                   )}
                   <div className="flex justify-end pt-1 border-t border-gray-300">
-                    <span className="text-indigo-700 font-bold text-base">Grand Total: {fmt(grandTotal)}</span>
+                    <span className="text-emerald-700 font-bold text-base">Grand Total: {fmt(grandTotal)}</span>
                   </div>
                 </div>
               </div>
@@ -528,7 +528,7 @@ const PurchaseVoucher = () => {
               <button onClick={() => { setShowForm(false); resetForm(); }}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">Cancel</button>
               <button onClick={handleSubmit} disabled={saving}
-                className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-60">
+                className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-60">
                 {saving ? 'Saving…' : editingPV ? 'Update Voucher' : 'Create Voucher'}
               </button>
             </div>
@@ -544,7 +544,7 @@ const PurchaseVoucher = () => {
               <h2 className="font-semibold text-gray-800">Voucher: {viewVoucher.pv_number}</h2>
               <div className="flex items-center gap-2">
                 <button onClick={() => printGRN(viewVoucher)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-100">
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-100">
                   <Printer size={15} /> Print GRN
                 </button>
                 <button onClick={() => setViewVoucher(null)}><X size={20} className="text-gray-400" /></button>
@@ -563,9 +563,9 @@ const PurchaseVoucher = () => {
               </div>
               {/* Journal Entry summary */}
               <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3">
-                  <p className="text-xs font-semibold text-indigo-500 uppercase mb-1">Purchase Account <span className="bg-indigo-200 text-indigo-800 px-1.5 py-0.5 rounded ml-1">DR</span></p>
-                  <p className="font-bold text-indigo-900 text-sm">{purchaseAccName(viewVoucher)}</p>
+                <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-4 py-3">
+                  <p className="text-xs font-semibold text-emerald-500 uppercase mb-1">Purchase Account <span className="bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded ml-1">DR</span></p>
+                  <p className="font-bold text-emerald-900 text-sm">{purchaseAccName(viewVoucher)}</p>
                 </div>
                 <div className="bg-amber-50 border border-amber-100 rounded-lg px-4 py-3">
                   <p className="text-xs font-semibold text-amber-500 uppercase mb-1">Supplier Account <span className="bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded ml-1">CR</span></p>
@@ -606,7 +606,7 @@ const PurchaseVoucher = () => {
                     <span>Tax ({fmt(viewVoucher.tax_percent)}%)</span><span>{fmt(viewVoucher.tax_amount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between font-bold text-indigo-700 px-4 pt-1 border-t border-gray-200">
+                <div className="flex justify-between font-bold text-emerald-700 px-4 pt-1 border-t border-gray-200">
                   <span>Grand Total</span><span>{fmt(viewVoucher.total_amount)}</span>
                 </div>
               </div>
@@ -624,7 +624,7 @@ const PurchaseVoucher = () => {
       {/* ── List ────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>
+          <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" /></div>
         ) : (
           <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] text-sm">
@@ -645,7 +645,7 @@ const PurchaseVoucher = () => {
                 <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">No purchase vouchers found</td></tr>
               ) : vouchers.map(v => (
                 <tr key={v.pv_id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-indigo-700 font-semibold">{v.pv_number}</td>
+                  <td className="px-4 py-3 font-mono text-emerald-700 font-semibold">{v.pv_number}</td>
                   <td className="px-4 py-3">
                     {v.po_number
                       ? <span className="text-blue-600 font-medium text-xs bg-blue-50 px-2 py-0.5 rounded">{v.po_number}</span>
@@ -659,7 +659,7 @@ const PurchaseVoucher = () => {
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={() => openView(v.pv_id)} title="View"
-                        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"><Eye size={15} /></button>
+                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition"><Eye size={15} /></button>
                       <button onClick={() => handlePrint(v)} title="Print GRN"
                         className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition"><Printer size={15} /></button>
                       <button onClick={() => openEdit(v)} title="Edit"

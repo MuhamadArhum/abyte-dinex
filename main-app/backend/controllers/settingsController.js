@@ -837,6 +837,27 @@ exports.getSystemInfo = async (req, res) => {
   }
 };
 
+// --- Get server's LAN IP (for Waiter App QR connection) ---
+exports.getServerIp = async (req, res) => {
+  try {
+    const interfaces = os.networkInterfaces();
+    let lanIp = null;
+    for (const name of Object.keys(interfaces)) {
+      for (const iface of interfaces[name] || []) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          lanIp = iface.address;
+          break;
+        }
+      }
+      if (lanIp) break;
+    }
+    res.json({ ip: lanIp || '127.0.0.1', port: Number(process.env.PORT) || 5000 });
+  } catch (err) {
+    logger.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // --- Add Print Job to Queue ---
 exports.addPrintJob = async (req, res) => {
   try {

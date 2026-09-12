@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, User, Sparkles, Minimize2, Maximize2, Trash2, Copy, Check } from 'lucide-react';
-import api from '../utils/api';
+import api, { HEAVY_TIMEOUT } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
 interface Message {
@@ -75,7 +75,7 @@ const AIWidgetInner = () => {
           role: m.role === 'user' ? 'user' : 'model',
           parts: [{ text: m.text }]
         })).slice(-10)
-      });
+      }, { timeout: HEAVY_TIMEOUT });
 
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
@@ -83,12 +83,18 @@ const AIWidgetInner = () => {
         text: response.data.reply,
         timestamp: new Date()
       }]);
-    } catch (err) {
+    } catch (err: any) {
       console.error('AI widget error:', err);
+      const backendMessage = err?.response?.data?.error;
+      const text = backendMessage
+        ? `${backendMessage} 😔`
+        : err?.code === 'ECONNABORTED'
+          ? "The AI is taking too long to respond. Please try again. 😔"
+          : "Sorry, I'm having trouble connecting. Please try again. 😔";
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'model',
-        text: "Sorry, I'm having trouble connecting. Please try again. 😔",
+        text,
         timestamp: new Date()
       }]);
     } finally {

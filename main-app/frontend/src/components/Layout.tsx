@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -48,12 +48,17 @@ import {
   AlertTriangle,
   History,
   Barcode,
+  QrCode,
+  Wifi,
+  Copy,
 } from 'lucide-react';
+import QRCodeSVG from 'react-qr-code';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import AIWidget from './AIWidget';
 import ProfileModal from './ProfileModal';
 import { usePrintQueue } from '../hooks/usePrintQueue';
+import api from '../utils/api';
 
 interface MenuItem {
   icon: any;
@@ -77,6 +82,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+  const waiterQrRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -86,6 +92,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       }
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
         setIsNotificationOpen(false);
+      }
+      if (waiterQrRef.current && !waiterQrRef.current.contains(e.target as Node)) {
+        setIsWaiterQrOpen(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
@@ -106,6 +115,20 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const toggleSection = (key: string) =>
     setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isWaiterQrOpen, setIsWaiterQrOpen] = useState(false);
+  const [qrCopied, setQrCopied] = useState(false);
+
+  // Server's actual LAN IP (the machine hosting the database), not the browser's hostname
+  const [waiterApiUrl, setWaiterApiUrl] = useState(() => `http://${window.location.hostname}:5000/api`);
+  useEffect(() => {
+    if (!isAdmin) return;
+    api.get('/settings/server-ip')
+      .then(({ data }) => {
+        if (data?.ip) setWaiterApiUrl(`http://${data.ip}:${data.port}/api`);
+      })
+      .catch(() => {});
+  }, [isAdmin]);
+  const waiterQrPayload = JSON.stringify({ url: waiterApiUrl, app: 'abyte-waiter' });
 
   const menuStructure: MenuItem[] = [
     {
@@ -498,10 +521,57 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
 
           <div className="flex items-center gap-1.5 md:gap-3 flex-shrink-0">
+            {/* Waiter App QR Code */}
+            {isAdmin && (
+              <div className="relative" ref={waiterQrRef}>
+                <button
+                  onClick={() => { setIsWaiterQrOpen(!isWaiterQrOpen); setIsNotificationOpen(false); setIsProfileOpen(false); }}
+                  className="relative p-2 md:p-2.5 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                  title="Waiter App QR Code"
+                >
+                  <QrCode size={18} className="md:hidden" />
+                  <QrCode size={22} className="hidden md:block" />
+                </button>
+
+                {/* Waiter QR Dropdown */}
+                {isWaiterQrOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50">
+                      <Wifi size={14} className="text-emerald-600" />
+                      <h3 className="text-sm font-semibold text-gray-800">Waiter App Connection</h3>
+                    </div>
+                    <div className="flex flex-col items-center gap-3 p-4">
+                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                        <QRCodeSVG value={waiterQrPayload} size={160} level="M" />
+                      </div>
+                      <div className="w-full text-center">
+                        <p className="text-xs text-gray-500 mb-1">Server URL</p>
+                        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                          <code className="text-xs text-emerald-700 font-mono truncate">{waiterApiUrl}</code>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(waiterApiUrl);
+                              setQrCopied(true);
+                              setTimeout(() => setQrCopied(false), 2000);
+                            }}
+                            className="text-gray-400 hover:text-emerald-600 transition-colors flex-shrink-0"
+                            title="Copy URL"
+                          >
+                            {qrCopied ? <CheckCircle size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-gray-400 text-center">Scan from the Waiter App to connect it to this server.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Notifications */}
             <div className="relative" ref={notifRef}>
               <button
-                onClick={() => { setIsNotificationOpen(!isNotificationOpen); setIsProfileOpen(false); }}
+                onClick={() => { setIsNotificationOpen(!isNotificationOpen); setIsProfileOpen(false); setIsWaiterQrOpen(false); }}
                 className="relative p-2 md:p-2.5 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
                 title="Notifications"
               >
@@ -527,7 +597,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             {/* User Profile */}
             <div className="relative" ref={profileRef}>
               <button
-                onClick={() => { setIsProfileOpen(!isProfileOpen); setIsNotificationOpen(false); }}
+                onClick={() => { setIsProfileOpen(!isProfileOpen); setIsNotificationOpen(false); setIsWaiterQrOpen(false); }}
                 className="flex items-center gap-2 md:gap-3 px-1.5 md:px-3 py-1.5 md:py-2 hover:bg-gray-50 rounded-xl transition-all border border-transparent hover:border-gray-200"
               >
                 <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold shadow-md text-sm flex-shrink-0">

@@ -1,6 +1,7 @@
 // =============================================================
 // aiController.js - AI Chat Assistant Controller
 // Full business context from ALL modules for Groq AI.
+// Falls back to a local Ollama model when GROQ_API_KEY isn't set.
 // =============================================================
 
 const logger = require('../config/logger');
@@ -14,6 +15,75 @@ function getGroqClient() {
   }
   return groq;
 }
+
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2:3b';
+
+async function getOllamaReply(messages, signal) {
+  const res = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: OLLAMA_MODEL, messages, stream: false, options: { num_predict: 800, temperature: 0.5 } }),
+    signal,
+  });
+  if (!res.ok) {
+    const err = new Error(`Ollama request failed (${res.status})`);
+    err.status = res.status;
+    throw err;
+  }
+  const data = await res.json();
+  return data.message?.content || '';
+}
+
+// ── Static app navigation map (where things live in the whole system) ─────
+const APP_NAV_GUIDE = `
+=== APP NAVIGATION GUIDE (where to find every feature in the sidebar) ===
+- Dashboard: "/" — home page with overview stats.
+
+- SALES menu: POS (billing screen), Walk-In Orders, Completed Orders, Delivery,
+  Done Orders, Cash Register (open/close till), Returns, Quotations, Credit Sales,
+  Price Rules, Sales Targets, Tables (restaurant table management), Customers.
+  → Sales reports live here too: "Sales Reports" and "Sales Analytics".
+
+- INVENTORY menu, section STOCK ITEMS: Products, Categories, Deals & Bundles, Opening Stock.
+  INVENTORY menu, section PURCHASE: Purchase Orders, Purchase Voucher, Purchase Return.
+  INVENTORY menu, section ISSUANCE: Stock Issue, Stock Return, Raw Sale, Sections.
+  INVENTORY menu, section MANUFACTURING: Recipes, Production Orders, Barcode Generator.
+  → INVENTORY menu, section REPORTS (all inventory/purchase reports live here):
+    Items Ledger, Item Wise Purchase, Supplier Wise (purchase), Issuance Reports,
+    Stock Reconciliation, Slow Moving Stock, Fast Moving Items, Purchase vs Issuance,
+    Opening/Closing Stock, Reorder Alert, Category Wise Purchase, Rate History.
+
+- SYSTEM menu (admin only):
+  • Users — /users — create/edit/delete login accounts AND create/delete user Roles
+    (e.g. Admin, Manager, Cashier, or custom roles).
+  • Access Control — per-role permission matrix (who can view/create/update/delete what).
+  • Audit Log — history of who did what and when.
+  • Backup — database backup/restore, includes optional Google Drive auto-upload.
+  • Email Notifications — SMTP/email settings.
+  • Settings — the main settings page, with tabs: Store Info, Receipt & Invoice,
+    POS Settings, Printer (thermal printer + Printer Agent setup), Security
+    (password/session policy), WhatsApp & FBR (WhatsApp Business API + FBR
+    e-invoicing integration for Pakistan tax compliance), System (server stats).
+
+- Top navbar (always visible): Notifications bell, Waiter App QR code button
+  (admin only — scan it from the mobile Waiter App to connect it to this server),
+  user Profile menu (edit profile, logout).
+
+- Roles & permissions: Admin role bypasses all permission checks and sees every
+  branch. Non-admin users are restricted to their assigned branch and only see
+  menu items/actions their role has permission for (managed in Access Control).
+
+- Currently enabled modules for this business: Sales and Inventory (this
+  deployment is scoped to restaurant/retail Sales + Inventory management;
+  Accounts and HR modules exist in the platform but are not enabled here).
+
+When a user asks where to find a report or any feature, point them to the exact
+menu, section, and item name above (e.g. "Sales menu → Sales Reports" or
+"System menu → Users → click 'New Role' to add a role"), in whichever language
+(English/Urdu/Roman Urdu) they asked in. If something isn't listed here, say you're
+not sure rather than guessing a page name.
+`;
 
 const sq = async (sql, params = []) => {
   try { return await query(sql, params); }
@@ -45,7 +115,7 @@ async function getSystemContext(tenantDb) {
       // ── INVENTORY ──────────────────────────────────────────────────
       allProducts, lowStock, stockSummary, inventoryValue,
       suppliersList, purchaseOrdersSummary, recentPurchaseOrders,
-      stockAdjustments, stockTransfers, stockIssues,
+      stockAdjustments, stockIssues,
 
       // ── CUSTOMERS ──────────────────────────────────────────────────
       customersSummary, topCustomers, creditCustomers, allCustomers,
@@ -102,14 +172,14 @@ async function getSystemContext(tenantDb) {
           FROM sales s LEFT JOIN customers c ON s.customer_id=c.customer_id
           ORDER BY s.sale_date DESC LIMIT 10`),
 
-      sq(`SELECT p.product_name, SUM(sd.quantity) as qty_sold, SUM(sd.subtotal) as revenue
+      sq(`SELECT p.product_name, SUM(sd.quantity) as qty_sold, SUM(sd.total_price) as revenue
           FROM sale_details sd
           JOIN products p ON sd.product_id=p.product_id
           JOIN sales s ON sd.sale_id=s.sale_id
           WHERE YEAR(s.sale_date)=YEAR(CURDATE()) AND MONTH(s.sale_date)=MONTH(CURDATE())
           GROUP BY p.product_id,p.product_name ORDER BY qty_sold DESC LIMIT 10`),
 
-      sq(`SELECT cat.category_name, SUM(sd.quantity) as qty_sold, SUM(sd.subtotal) as revenue
+      sq(`SELECT cat.category_name, SUM(sd.quantity) as qty_sold, SUM(sd.total_price) as revenue
           FROM sale_details sd
           JOIN products p ON sd.product_id=p.product_id
           JOIN categories cat ON p.category_id=cat.category_id
@@ -125,7 +195,7 @@ async function getSystemContext(tenantDb) {
                SUM(CASE WHEN status='approved' THEN 1 ELSE 0 END) as approved
           FROM quotations`),
 
-      sq(`SELECT COUNT(*) as total, COALESCE(SUM(total_amount),0) as outstanding
+      sq(`SELECT COUNT(*) as total, COALESCE(SUM(balance_due),0) as outstanding
           FROM credit_sales WHERE status IN ('pending','partial')`),
 
       sq(`SELECT COUNT(*) as total,
@@ -153,7 +223,7 @@ async function getSystemContext(tenantDb) {
       sq(`SELECT COALESCE(SUM(i.available_stock*p.cost_price),0) as stock_value
           FROM inventory i JOIN products p ON i.product_id=p.product_id WHERE p.is_active=1`),
 
-      sq(`SELECT supplier_id, supplier_name, phone, email, balance FROM suppliers WHERE is_active=1 ORDER BY supplier_name LIMIT 50`),
+      sq(`SELECT supplier_id, supplier_name, phone, email FROM suppliers WHERE is_active=1 ORDER BY supplier_name LIMIT 50`),
 
       sq(`SELECT COUNT(*) as total, COALESCE(SUM(total_amount),0) as value,
                SUM(CASE WHEN status IN ('pending','ordered','partial') THEN 1 ELSE 0 END) as pending_count,
@@ -166,12 +236,9 @@ async function getSystemContext(tenantDb) {
           LEFT JOIN suppliers s ON po.supplier_id=s.supplier_id
           ORDER BY po.order_date DESC LIMIT 10`),
 
-      sq(`SELECT COUNT(*) as count, SUM(CASE WHEN adjustment_type='add' THEN quantity ELSE -quantity END) as net_units
+      sq(`SELECT COUNT(*) as count, SUM(CASE WHEN adjustment_type='add' THEN quantity_adjusted ELSE -quantity_adjusted END) as net_units
           FROM stock_adjustments
-          WHERE YEAR(adjustment_date)=YEAR(CURDATE()) AND MONTH(adjustment_date)=MONTH(CURDATE())`),
-
-      sq(`SELECT COUNT(*) as count FROM stock_transfers
-          WHERE YEAR(transfer_date)=YEAR(CURDATE()) AND MONTH(transfer_date)=MONTH(CURDATE())`),
+          WHERE YEAR(created_at)=YEAR(CURDATE()) AND MONTH(created_at)=MONTH(CURDATE())`),
 
       sq(`SELECT COUNT(*) as total,
                SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pending,
@@ -189,15 +256,15 @@ async function getSystemContext(tenantDb) {
           WHERE c.customer_id!=1 AND YEAR(s.sale_date)=YEAR(CURDATE()) AND MONTH(s.sale_date)=MONTH(CURDATE())
           GROUP BY c.customer_id,c.customer_name ORDER BY total_spent DESC LIMIT 10`),
 
-      sq(`SELECT c.customer_name, cs.total_amount, cs.paid_amount, cs.balance, cs.due_date, cs.status
+      sq(`SELECT c.customer_name, cs.total_amount, cs.paid_amount, cs.balance_due, cs.due_date, cs.status
           FROM credit_sales cs JOIN customers c ON cs.customer_id=c.customer_id
-          WHERE cs.status IN ('pending','partial') ORDER BY cs.balance DESC LIMIT 20`),
+          WHERE cs.status IN ('pending','partial') ORDER BY cs.balance_due DESC LIMIT 20`),
 
-      sq(`SELECT customer_id, customer_name, phone, email, balance FROM customers
+      sq(`SELECT customer_id, customer_name, phone_number AS phone, email, balance FROM customers
           WHERE customer_id!=1 ORDER BY customer_name LIMIT 100`),
 
       // ════════════ SYSTEM ════════════
-      sq(`SELECT status, opening_amount, closing_amount, opened_at
+      sq(`SELECT status, opening_balance AS opening_amount, closing_balance AS closing_amount, opened_at
           FROM cash_registers ORDER BY register_id DESC LIMIT 1`),
 
       sq(`SELECT u.name, u.email, r.role_name FROM users u
@@ -272,7 +339,7 @@ ${recentSales.map(s=>`• #${s.sale_id} | ${s.customer} | Rs.${s.total_amount} |
 • Pending Credit Sales: ${credit.total} | Outstanding: Rs. ${Number(credit.outstanding).toLocaleString()}
 
 --- CREDIT CUSTOMERS (OUTSTANDING) ---
-${creditCustomers.map(c=>`• ${c.customer_name} | Total: Rs.${Number(c.total_amount).toLocaleString()} | Paid: Rs.${Number(c.paid_amount).toLocaleString()} | Balance: Rs.${Number(c.balance).toLocaleString()} | Due: ${c.due_date?new Date(c.due_date).toLocaleDateString():'N/A'}`).join('\n')||'• No credit dues'}
+${creditCustomers.map(c=>`• ${c.customer_name} | Total: Rs.${Number(c.total_amount).toLocaleString()} | Paid: Rs.${Number(c.paid_amount).toLocaleString()} | Balance: Rs.${Number(c.balance_due).toLocaleString()} | Due: ${c.due_date?new Date(c.due_date).toLocaleDateString():'N/A'}`).join('\n')||'• No credit dues'}
 
 --- DELIVERIES ---
 • Total: ${deliv.total} | Pending: ${deliv.pending} | Delivered: ${deliv.delivered}
@@ -296,11 +363,10 @@ ${lowStock.length>0 ? lowStock.map(i=>`• ${i.product_name}: ${i.available_stoc
 ${recentPurchaseOrders.map(p=>`• ${p.po_number} | ${p.supplier_name||'N/A'} | Rs.${Number(p.total_amount).toLocaleString()} | ${p.status} | ${new Date(p.order_date).toLocaleDateString()}`).join('\n')||'• None'}
 
 --- SUPPLIERS ---
-${suppliersList.map(s=>`• [${s.supplier_id}] ${s.supplier_name} | ${s.phone||''} | Balance: Rs.${Number(s.balance||0).toLocaleString()}`).join('\n')||'• No suppliers'}
+${suppliersList.map(s=>`• [${s.supplier_id}] ${s.supplier_name} | ${s.phone||''}`).join('\n')||'• No suppliers'}
 
 --- STOCK MOVEMENTS (THIS MONTH) ---
 • Adjustments: ${adjMonth.count} | Net Units: ${adjMonth.net_units}
-• Transfers: ${stockTransfers[0]?.count||0}
 • Stock Issues: Total ${issuesSt.total} | Pending ${issuesSt.pending} | Issued ${issuesSt.issued}
 
 ━━━━━━━━━━ CUSTOMERS MODULE ━━━━━━━━━━
@@ -320,7 +386,7 @@ ${allCustomers.map(c=>`• [${c.customer_id}] ${c.customer_name} | ${c.phone||''
 • ${registerInfo}
 
 --- SYSTEM USERS ---
-${usersList.map(u=>`• ${u.name} | ${u.email} | ${u.role_name}`).join('\n')||'• No users'}
+${usersList.map(u=>`• Name: ${u.name} | Email: ${u.email} | Role: ${u.role_name}`).join('\n')||'• No users'}
 
 === END OF BUSINESS DATA ===`;
 
@@ -345,9 +411,7 @@ exports.chat = async (req, res) => {
       return res.status(400).json({ error: 'Message too long (max 2000 characters)' });
     }
 
-    if (!getGroqClient()) {
-      return res.status(503).json({ error: 'AI feature not configured. Contact administrator.' });
-    }
+    const useGroq = !!getGroqClient();
 
     const tenantDb = process.env.DB_NAME || 'abyte_pos';
     const systemContext = await getSystemContext(tenantDb);
@@ -358,6 +422,8 @@ exports.chat = async (req, res) => {
         content: `You are an AI Business Assistant for Abyte Dinex system.
 You have COMPLETE real-time access to ALL business modules: Sales, Inventory, Customers, and System.
 
+${APP_NAV_GUIDE}
+
 ${systemContext}
 
 Instructions:
@@ -367,6 +433,8 @@ Instructions:
 - For transaction details, refer to the sales data with product breakdowns
 - Be concise but complete — show all relevant data when asked
 - You CAN answer questions about specific sales, products, customers, purchase orders
+- If asked where a report or feature is located, use the APP NAVIGATION GUIDE above to point to the exact menu and item name
+- Each user record has three SEPARATE fields — Name, Email, Role. Never mix them up: a person's Name (e.g. "Administrator") is not their Role (e.g. "Admin") even when the words look similar. Copy the exact value after "Role:" for the role, and the exact value after "Name:" for the name — do not swap or guess.
 - Keep responses under 400 words unless a full list is requested`
       }
     ];
@@ -384,19 +452,24 @@ Instructions:
 
     messages.push({ role: "user", content: message });
 
-    const AI_TIMEOUT_MS = 30000;
-    const MAX_RETRIES = 2;
-    let completion;
+    const AI_TIMEOUT_MS = useGroq ? 30000 : 110000;
+    const MAX_RETRIES = useGroq ? 2 : 0; // local model: one slow attempt beats stacking retries
+    let replyText;
     let lastErr;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
       try {
-        completion = await getGroqClient().chat.completions.create(
-          { model: "llama-3.3-70b-versatile", messages, max_tokens: 800, temperature: 0.5 },
-          { signal: controller.signal }
-        );
+        if (useGroq) {
+          const completion = await getGroqClient().chat.completions.create(
+            { model: "llama-3.3-70b-versatile", messages, max_tokens: 800, temperature: 0.5 },
+            { signal: controller.signal }
+          );
+          replyText = completion.choices[0].message.content;
+        } else {
+          replyText = await getOllamaReply(messages, controller.signal);
+        }
         clearTimeout(timer);
         break;
       } catch (err) {
@@ -408,15 +481,18 @@ Instructions:
       }
     }
 
-    if (!completion) {
+    if (!replyText) {
       logger.error("AI Chat Error:", lastErr?.message);
+      if (!useGroq && (lastErr?.cause?.code === 'ECONNREFUSED' || lastErr?.name === 'TypeError')) {
+        return res.status(503).json({ error: "Local AI (Ollama) is not running. Start Ollama and try again." });
+      }
       if (lastErr?.status === 401) return res.status(503).json({ error: "Invalid Groq API key." });
       if (lastErr?.status === 429) return res.status(503).json({ error: "Rate limit exceeded. Please wait a moment." });
       if (lastErr?.name === 'AbortError') return res.status(503).json({ error: "AI request timed out. Please try again." });
       return res.status(503).json({ error: "AI assistant is temporarily unavailable. Please try again." });
     }
 
-    res.json({ reply: completion.choices[0].message.content });
+    res.json({ reply: replyText });
   } catch (error) {
     logger.error("AI Chat Error:", error.message);
     res.status(503).json({ error: "AI assistant is temporarily unavailable. Please try again." });

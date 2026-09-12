@@ -86,10 +86,10 @@ const StockReturnIssuance = () => {
     <div className="p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2"><ArrowDownToLine size={20} className="text-blue-600" /> Stock Return (Issuance)</h1>
+          <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2"><ArrowDownToLine size={20} className="text-emerald-600" /> Stock Return (Issuance)</h1>
           <p className="text-sm text-gray-500 mt-0.5">Return stock from sections back to warehouse</p>
         </div>
-        <button onClick={() => { fetchSections(); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+        <button onClick={() => { fetchSections(); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium">
           <Plus size={18} /> <span className="hidden sm:inline">New Return</span>
         </button>
       </div>
@@ -107,7 +107,7 @@ const StockReturnIssuance = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Section *</label>
                   <select value={formSection} onChange={e => setFormSection(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
                     <option value="">-- Select --</option>
                     {sections.filter(s => s.is_active !== 0).map(s => <option key={s.section_id} value={s.section_id}>{s.section_name}</option>)}
                   </select>
@@ -115,7 +115,7 @@ const StockReturnIssuance = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Return Date *</label>
                   <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
@@ -169,7 +169,7 @@ const StockReturnIssuance = () => {
             </div>
             <div className="flex justify-end gap-3 px-6 py-4 border-t">
               <button onClick={() => setShowForm(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm">Cancel</button>
-              <button onClick={handleSubmit} disabled={saving} className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60">
+              <button onClick={handleSubmit} disabled={saving} className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-60">
                 {saving ? 'Saving...' : 'Create Return'}
               </button>
             </div>
@@ -218,7 +218,7 @@ const StockReturnIssuance = () => {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        {loading ? <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div> : (
+        {loading ? <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" /></div> : (
           <div className="overflow-x-auto">
           <table className="w-full min-w-[600px] text-sm">
             <thead className="bg-gray-50 border-b">
@@ -233,12 +233,12 @@ const StockReturnIssuance = () => {
             <tbody className="divide-y divide-gray-100">
               {returns.length === 0 ? <tr><td colSpan={5} className="px-4 py-10 text-center text-gray-400">No returns found</td></tr> : returns.map(r => (
                 <tr key={r.return_id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-blue-700">{r.return_number}</td>
+                  <td className="px-4 py-3 font-mono text-emerald-700">{r.return_number}</td>
                   <td className="px-4 py-3">{r.section_name}</td>
                   <td className="px-4 py-3 text-gray-600">{r.return_date}</td>
                   <td className="px-4 py-3 text-right">{r.item_count}</td>
                   <td className="px-4 py-3">
-                    <button onClick={() => openView(r.return_id)} className="text-blue-600 hover:text-blue-800"><Eye size={15} /></button>
+                    <button onClick={() => openView(r.return_id)} className="text-emerald-600 hover:text-emerald-800"><Eye size={15} /></button>
                   </td>
                 </tr>
               ))}

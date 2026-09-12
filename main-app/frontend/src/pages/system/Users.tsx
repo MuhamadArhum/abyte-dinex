@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   UserPlus, Edit2, Trash2, Shield, Eye, EyeOff,
-  Search, RefreshCw, Users, UserCheck, UserX, X,
+  Search, RefreshCw, Users, UserCheck, UserX, X, Plus,
 } from 'lucide-react';
 import api from '../../utils/api';
 import Pagination from '../../components/Pagination';
@@ -36,6 +36,69 @@ const ROLE_BG: Record<string, string> = {
 };
 
 const emptyForm = { username: '', name: '', email: '', password: '', role_id: '' };
+const BUILT_IN_ROLES = ['Admin', 'Manager', 'Cashier'];
+
+/* ── Role Form Modal ── */
+function RoleModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const [name, setName]     = useState('');
+  const [error, setError]   = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleCreate = async () => {
+    setError('');
+    if (!name.trim()) return setError('Role name is required.');
+    setSaving(true);
+    try {
+      await api.post('/users/roles', { role_name: name.trim() });
+      onSaved();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to create role.');
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center">
+              <Shield size={18} className="text-emerald-600" />
+            </div>
+            <h2 className="text-base font-semibold text-gray-800">New Role</h2>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <X size={16} className="text-gray-500" />
+          </button>
+        </div>
+        <div className="px-6 py-5 space-y-3">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2.5 rounded-xl">
+              {error}
+            </div>
+          )}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Role Name *</label>
+            <input
+              value={name} onChange={e => setName(e.target.value)}
+              placeholder="e.g. Supervisor"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors"
+            />
+          </div>
+        </div>
+        <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
+          <button onClick={onClose}
+            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium">
+            Cancel
+          </button>
+          <button onClick={handleCreate} disabled={saving}
+            className="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-sm font-semibold transition-colors">
+            {saving ? 'Creating…' : 'Create Role'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ── User Form Modal ── */
 function UserModal({
@@ -79,7 +142,7 @@ function UserModal({
     } finally { setSaving(false); }
   };
 
-  const inp = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-colors';
+  const inp = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors';
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -88,8 +151,8 @@ function UserModal({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-violet-100 rounded-xl flex items-center justify-center">
-              <UserPlus size={18} className="text-violet-600" />
+            <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center">
+              <UserPlus size={18} className="text-emerald-600" />
             </div>
             <h2 className="text-base font-semibold text-gray-800">
               {user ? 'Edit User' : 'Add New User'}
@@ -159,7 +222,7 @@ function UserModal({
             Cancel
           </button>
           <button onClick={handleSave} disabled={saving}
-            className="flex-1 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white rounded-xl text-sm font-semibold transition-colors">
+            className="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-sm font-semibold transition-colors">
             {saving ? 'Saving…' : user ? 'Save Changes' : 'Create User'}
           </button>
         </div>
@@ -185,6 +248,7 @@ export default function UsersPage() {
 
   const [modalUser, setModalUser] = useState<AppUser | null | 'new'>('new' as any);
   const [showModal, setShowModal] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -222,6 +286,20 @@ export default function UsersPage() {
     }
   };
 
+  const onRoleSaved = () => { setShowRoleModal(false); fetchUsers(); };
+
+  const handleDeleteRole = async (roleId: number, roleName: string) => {
+    const ok = await confirm({ title: 'Delete Role', message: `Delete role "${roleName}"? This cannot be undone.`, type: 'danger' });
+    if (!ok) return;
+    try {
+      await api.delete(`/users/roles/${roleId}`);
+      toast.success(`Role "${roleName}" deleted`);
+      fetchUsers();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to delete role.');
+    }
+  };
+
   /* stat counts from current page — approximation; total from API */
   const adminCount   = users.filter(u => u.role === 'Admin').length;
   const managerCount = users.filter(u => u.role === 'Manager').length;
@@ -233,8 +311,8 @@ export default function UsersPage() {
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 bg-violet-100 rounded-2xl flex items-center justify-center">
-            <Users size={22} className="text-violet-600" />
+          <div className="w-11 h-11 bg-emerald-100 rounded-2xl flex items-center justify-center">
+            <Users size={22} className="text-emerald-600" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900">User Management</h1>
@@ -250,7 +328,7 @@ export default function UsersPage() {
             <RefreshCw size={15} className="text-gray-500" />
           </button>
           <button onClick={openCreate}
-            className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
             <UserPlus size={16} /> Add User
           </button>
         </div>
@@ -285,15 +363,37 @@ export default function UsersPage() {
               type="text" placeholder="Search name, username or email…"
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1); }}
-              className="pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm w-full focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-colors"
+              className="pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm w-full focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors"
             />
           </div>
           <select value={roleFilter}
             onChange={e => { setRole(e.target.value); setPage(1); }}
-            className="border border-gray-200 rounded-xl text-sm px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 bg-white cursor-pointer">
+            className="border border-gray-200 rounded-xl text-sm px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white cursor-pointer">
             <option value="">All Roles</option>
             {roles.map(r => <option key={r.role_id} value={r.role_name}>{r.role_name}</option>)}
           </select>
+        </div>
+
+        {/* ── Manage Roles ── */}
+        <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 mr-1">
+            <Shield size={12} /> Roles
+          </span>
+          {roles.map(r => (
+            <span key={r.role_id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-sm text-gray-700">
+              {r.role_name}
+              {!BUILT_IN_ROLES.includes(r.role_name) && (
+                <button onClick={() => handleDeleteRole(r.role_id, r.role_name)}
+                  className="text-red-400 hover:text-red-600 transition ml-0.5" title="Delete role">
+                  <X size={12} />
+                </button>
+              )}
+            </span>
+          ))}
+          <button onClick={() => setShowRoleModal(true)}
+            className="flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-semibold hover:bg-emerald-100 transition">
+            <Plus size={13} /> New Role
+          </button>
         </div>
       </div>
 
@@ -301,7 +401,7 @@ export default function UsersPage() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48 text-gray-400">
-            <div className="animate-spin rounded-full h-8 w-8 border-3 border-gray-200 border-t-violet-600" />
+            <div className="animate-spin rounded-full h-8 w-8 border-3 border-gray-200 border-t-emerald-600" />
           </div>
         ) : users.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-gray-400">
@@ -322,7 +422,7 @@ export default function UsersPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {users.map((u, i) => (
-                  <tr key={u.user_id} className="hover:bg-violet-50/30 transition-colors group">
+                  <tr key={u.user_id} className="hover:bg-emerald-50/30 transition-colors group">
                     <td className="px-5 py-4 text-sm text-gray-400 font-medium">
                       {(page - 1) * limit + i + 1}
                     </td>
@@ -381,6 +481,10 @@ export default function UsersPage() {
           onClose={closeModal}
           onSaved={onSaved}
         />
+      )}
+
+      {showRoleModal && (
+        <RoleModal onClose={() => setShowRoleModal(false)} onSaved={onRoleSaved} />
       )}
     </div>
   );

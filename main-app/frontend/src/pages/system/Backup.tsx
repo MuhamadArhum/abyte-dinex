@@ -303,8 +303,8 @@ const Backup = () => {
       {/* Google Drive Settings */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center">
-            <Cloud size={18} className="text-indigo-600" />
+          <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center">
+            <Cloud size={18} className="text-emerald-600" />
           </div>
           <div>
             <h2 className="font-semibold text-gray-800">Google Drive Auto-Upload</h2>
@@ -319,7 +319,7 @@ const Backup = () => {
               <input type="checkbox" checked={drive.gdrive_enabled}
                 onChange={e => setDrive(p => ({ ...p, gdrive_enabled: e.target.checked }))}
                 className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
             </label>
             <span className="text-sm font-medium text-gray-700">
               {drive.gdrive_enabled ? 'Upload Enabled' : 'Upload Disabled'}
@@ -334,7 +334,7 @@ const Backup = () => {
               value={drive.gdrive_folder_id}
               onChange={e => setDrive(p => ({ ...p, gdrive_folder_id: e.target.value }))}
               placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74O..."
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none font-mono"
             />
             <p className="text-xs text-gray-400 mt-1">Copy from Google Drive folder URL</p>
           </div>
@@ -353,7 +353,7 @@ const Backup = () => {
             onChange={e => setDriveJsonInput(e.target.value)}
             rows={5}
             placeholder={'{\n  "type": "service_account",\n  "project_id": "...",\n  "private_key": "...",\n  ...\n}'}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none resize-none"
           />
           <p className="text-xs text-gray-400 mt-1">
             From Google Cloud Console → IAM → Service Accounts → Keys → Add Key → JSON.
@@ -368,7 +368,7 @@ const Backup = () => {
             Test Connection
           </button>
           <button onClick={handleSaveDrive} disabled={driveSaving}
-            className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition disabled:opacity-50 text-sm">
+            className="flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition disabled:opacity-50 text-sm">
             {driveSaving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
             Save Drive Settings
           </button>

@@ -66,8 +66,8 @@ const SendInvoiceEmailModal: React.FC<Props> = ({ isOpen, onClose, saleId, invoi
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
-                  <Mail className="w-5 h-5 text-blue-600" />
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
+                  <Mail className="w-5 h-5 text-emerald-600" />
                 </div>
                 <div>
                   <h2 className="text-base font-semibold text-gray-900">Email Invoice</h2>
@@ -114,7 +114,7 @@ const SendInvoiceEmailModal: React.FC<Props> = ({ isOpen, onClose, saleId, invoi
                         className={`w-full pl-9 pr-4 py-2.5 text-sm border rounded-xl outline-none transition-colors
                           ${error
                             ? 'border-red-300 bg-red-50 focus:border-red-400'
-                            : 'border-gray-200 bg-white focus:border-blue-400 hover:border-gray-300'
+                            : 'border-gray-200 bg-white focus:border-emerald-400 hover:border-gray-300'
                           } disabled:opacity-60`}
                       />
                     </div>
@@ -129,7 +129,7 @@ const SendInvoiceEmailModal: React.FC<Props> = ({ isOpen, onClose, saleId, invoi
                   {customerEmail && customerEmail !== email && (
                     <button
                       onClick={() => { setEmail(customerEmail); setError(''); }}
-                      className="mt-2 text-xs text-blue-500 hover:text-blue-700 transition-colors"
+                      className="mt-2 text-xs text-emerald-500 hover:text-emerald-700 transition-colors"
                     >
                       Use customer email: {customerEmail}
                     </button>
@@ -159,7 +159,7 @@ const SendInvoiceEmailModal: React.FC<Props> = ({ isOpen, onClose, saleId, invoi
                   <button
                     onClick={handleSend}
                     disabled={loading || !email.trim()}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {loading ? (
                       <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
