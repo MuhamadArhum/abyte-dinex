@@ -91,6 +91,12 @@ const validateBackupFilename = [
     .matches(/^[\w\-]+\.sql$/).withMessage('Invalid backup filename'),
 ];
 
+// Same rule as validateBackupFilename, but for a :filename route param (e.g. delete/download)
+const validateBackupFilenameParam = [
+  param('filename').trim().notEmpty().withMessage('Filename required')
+    .matches(/^[\w\-]+\.sql$/).withMessage('Invalid backup filename'),
+];
+
 module.exports = {
   handleValidation,
   validateLogin,
@@ -102,4 +108,5 @@ module.exports = {
   validateId,
   validatePagination,
   validateBackupFilename,
+  validateBackupFilenameParam,
 };

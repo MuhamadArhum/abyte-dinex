@@ -104,6 +104,28 @@ async function batchUpdateStock(conn, items, sign) {
   }
 }
 
+// Helper: Reverse a completed, non-credit sale's contribution to the currently open
+// cash register (mirrors the increment logic in createSale/completeSale).
+// Only applies when the register was already open when the sale was made — otherwise
+// there is nothing to reverse against (the sale's shift has already been closed).
+async function reverseRegisterForSale(conn, sale) {
+  if (sale.status !== 'completed') return; // stock/register were never touched for pending/refunded sales
+
+  const creditRows = await conn.query('SELECT 1 FROM credit_sales WHERE sale_id = ? LIMIT 1', [sale.sale_id]);
+  if (creditRows.length > 0) return; // credit sales never update cash_registers
+
+  const openRegister = await conn.query("SELECT register_id, opened_at FROM cash_registers WHERE status = 'open' LIMIT 1");
+  if (openRegister.length === 0) return;
+  if (new Date(sale.sale_date) < new Date(openRegister[0].opened_at)) return; // sale belongs to an already-closed shift
+
+  const pm = sale.payment_method || 'cash';
+  if (pm === 'cash') {
+    await conn.query('UPDATE cash_registers SET cash_sales_total = cash_sales_total - ? WHERE register_id = ?', [sale.total_amount, openRegister[0].register_id]);
+  } else if (pm === 'card') {
+    await conn.query('UPDATE cash_registers SET card_sales_total = card_sales_total - ? WHERE register_id = ?', [sale.total_amount, openRegister[0].register_id]);
+  }
+}
+
 // Helper: Validate and parse pagination params
 const parsePagination = (page, limit) => {
   const pageNum = parseInt(page) || 1;
@@ -665,15 +687,21 @@ exports.deleteSale = async (req, res) => {
     await conn.beginTransaction();
 
     // Admins can delete any sale; non-admins are blocked above — no branch filter needed here
-    const sale = await conn.query('SELECT status FROM sales WHERE sale_id = ?', [id]);
+    const sale = await conn.query('SELECT sale_id, status, payment_method, total_amount, sale_date FROM sales WHERE sale_id = ? FOR UPDATE', [id]);
     if (sale.length === 0) {
       await conn.rollback();
       return res.status(404).json({ message: 'Sale not found' });
     }
 
-    // Restore stock in 4 batch queries
-    const items = await conn.query('SELECT product_id, variant_id, quantity FROM sale_details WHERE sale_id = ?', [id]);
-    await batchUpdateStock(conn, items, '+');
+    // Only restore stock if it was actually deducted for this sale:
+    //   - 'pending' sales never had stock deducted (deducted only on completeSale)
+    //   - 'refunded' sales already had stock restored once by refundSale
+    // Restoring in either of those cases would double-add stock that was never removed.
+    if (sale[0].status === 'completed') {
+      const items = await conn.query('SELECT product_id, variant_id, quantity FROM sale_details WHERE sale_id = ?', [id]);
+      await batchUpdateStock(conn, items, '+');
+      await reverseRegisterForSale(conn, sale[0]);
+    }
 
     // Delete records
     await conn.query('DELETE FROM sale_details WHERE sale_id = ?', [id]);
@@ -939,20 +967,31 @@ exports.refundSale = async (req, res) => {
     conn = await getConnection();
     await conn.beginTransaction();
 
-    const sale = await conn.query(`SELECT status FROM sales WHERE sale_id = ? FOR UPDATE`, [id]);
+    const sale = await conn.query(
+      `SELECT sale_id, status, payment_method, total_amount, sale_date FROM sales WHERE sale_id = ? FOR UPDATE`,
+      [id]
+    );
     if (sale.length === 0) {
       await conn.rollback();
       return res.status(404).json({ message: 'Sale not found' });
     }
-    
+
     if (sale[0].status === 'refunded') {
       await conn.rollback();
       return res.status(400).json({ message: 'Sale is already refunded' });
     }
 
+    // Only a completed sale ever had stock deducted / register totals updated.
+    // Refunding a 'pending' order (never deducted) would otherwise add phantom stock.
+    if (sale[0].status !== 'completed') {
+      await conn.rollback();
+      return res.status(400).json({ message: 'Only completed sales can be refunded' });
+    }
+
     // Restore stock in 4 batch queries
     const items = await conn.query('SELECT product_id, variant_id, quantity FROM sale_details WHERE sale_id = ?', [id]);
     await batchUpdateStock(conn, items, '+');
+    await reverseRegisterForSale(conn, sale[0]);
 
     // Update status
     await conn.query('UPDATE sales SET status = "refunded" WHERE sale_id = ?', [id]);

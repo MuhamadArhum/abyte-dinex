@@ -6,13 +6,18 @@ const pad = (n) => String(n).padStart(6, '0');
 
 // Column migrations handled by migrationService.js at server startup
 
-async function nextPVNumber() {
-  const [last] = await query('SELECT pv_number FROM inv_purchase_vouchers ORDER BY pv_id DESC LIMIT 1');
-  if (last?.pv_number) {
-    const m = last.pv_number.match(/\d+$/);
-    if (m) return `PV${pad(parseInt(m[0]) + 1)}`;
+async function nextPVNumber(conn) {
+  await conn.query("SELECT GET_LOCK('pv_number_gen', 10)");
+  try {
+    const [last] = await conn.query('SELECT pv_number FROM inv_purchase_vouchers ORDER BY pv_id DESC LIMIT 1');
+    if (last?.pv_number) {
+      const m = last.pv_number.match(/\d+$/);
+      if (m) return `PV${pad(parseInt(m[0]) + 1)}`;
+    }
+    return `PV${pad(1)}`;
+  } finally {
+    await conn.query("SELECT RELEASE_LOCK('pv_number_gen')");
   }
-  return `PV${pad(1)}`;
 }
 
 // ── Helper: reverse stock for a PV's items ────────────────────
@@ -147,7 +152,7 @@ exports.create = async (req, res) => {
     }
 
     await conn.beginTransaction();
-    const pv_number = await nextPVNumber();
+    const pv_number = await nextPVNumber(conn);
 
     const shipping        = Number(shipping_cost)    || 0;
     const extra           = Number(extra_charges)    || 0;

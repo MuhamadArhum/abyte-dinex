@@ -214,7 +214,7 @@ exports.updateSettings = async (req, res) => {
     }
 
     await logAction(req.user.user_id, req.user.name, 'SETTINGS_UPDATED', 'settings', 1, { store_name }, req.ip);
-    cache.invalidateSettings('').catch(() => {});
+    cache.invalidateSettings().catch(() => {});
     res.json({ message: 'Settings updated successfully' });
   } catch (err) {
     logger.error(err);
@@ -975,7 +975,7 @@ exports.uploadLogo = async (req, res) => {
     }
 
     await query('UPDATE store_settings SET receipt_logo = ? WHERE setting_id = 1', [logoPath]);
-    cache.invalidateSettings('').catch(() => {});
+    cache.invalidateSettings().catch(() => {});
 
     res.json({ success: true, logo_url: logoPath });
   } catch (err) {

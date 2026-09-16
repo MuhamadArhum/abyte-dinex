@@ -136,10 +136,14 @@ exports.closeRegister = async (req, res) => {
 
     const reg = register[0];
 
-    const totalExpenses = 0;
-
-    // Expected = Opening Balance + Cash Sales - Expenses
-    const expected = round2(parseFloat(reg.opening_balance) + parseFloat(reg.cash_sales_total) - totalExpenses);
+    // Expected = Opening Balance + Cash Sales + Cash In - Cash Out
+    // (total_cash_in/total_cash_out are the cash_movements running totals recorded by addCashMovement)
+    const expected = round2(
+      parseFloat(reg.opening_balance) +
+      parseFloat(reg.cash_sales_total) +
+      parseFloat(reg.total_cash_in || 0) -
+      parseFloat(reg.total_cash_out || 0)
+    );
     const difference = round2(parseFloat(closing_balance) - expected);
 
     await conn.query(

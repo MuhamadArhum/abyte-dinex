@@ -27,7 +27,7 @@ const authenticate = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
 
     const rows = await query(
-      'SELECT user_id, username, name, email, role_id, role_name, is_active FROM users WHERE user_id = ?',
+      'SELECT user_id, username, name, email, role_id, role_name, is_active, password_changed_at FROM users WHERE user_id = ?',
       [decoded.user_id]
     );
 
@@ -39,6 +39,17 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ message: 'Account has been deactivated. Please contact your administrator.' });
     }
 
+    // Reject tokens issued before the user's most recent password change/reset —
+    // otherwise a token stolen before a security-motivated password change stays
+    // valid until it naturally expires.
+    if (rows[0].password_changed_at && decoded.iat) {
+      const changedAtSec = new Date(rows[0].password_changed_at).getTime() / 1000;
+      if (decoded.iat < changedAtSec) {
+        return res.status(401).json({ message: 'Password was changed. Please login again.' });
+      }
+    }
+
+    delete rows[0].password_changed_at;
     req.user    = rows[0];
     req.modules = []; // all modules enabled in single-tenant; kept for frontend compat
 

@@ -42,7 +42,6 @@ const MIGRATIONS = [
         `ALTER TABLE customers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL DEFAULT NULL`,
         // Credit Sales
         `ALTER TABLE credit_sales ADD COLUMN IF NOT EXISTS branch_id INT NULL`,
-        `ALTER TABLE credit_sales ADD COLUMN IF NOT EXISTS balance DECIMAL(10,2) DEFAULT NULL`,
         // Other tables
         `ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS branch_id INT NULL`,
         `ALTER TABLE stock_issues ADD COLUMN IF NOT EXISTS branch_id INT NULL`,
@@ -655,6 +654,28 @@ const MIGRATIONS = [
       await exec(`ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS delivery_charges DECIMAL(10,2) DEFAULT 0`);
       await exec(`ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS notes TEXT NULL`);
       await exec(`ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS delivery_number VARCHAR(30) NULL`);
+    },
+  },
+  {
+    version: 27,
+    name: 'drop_dead_credit_sales_balance_column',
+    // credit_sales.balance was a duplicate of balance_due that no insert path ever
+    // populated. On a fresh install (schema.sql) it is NOT NULL with no default,
+    // which made every credit sale creation fail. Nothing in the app reads this
+    // column (only balance_due is used) — remove it rather than keep two sources
+    // of truth in sync.
+    async run(db) {
+      await queryDb(db, `ALTER TABLE credit_sales DROP COLUMN IF EXISTS balance`);
+    },
+  },
+  {
+    version: 28,
+    name: 'users_password_changed_at',
+    // Lets authenticate() reject tokens issued before the user's last password
+    // change/reset — closes the gap where a compromised password's old JWTs
+    // stayed valid until natural expiry even after the password was changed.
+    async run(db) {
+      await queryDb(db, `ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at DATETIME NULL`);
     },
   },
 ];

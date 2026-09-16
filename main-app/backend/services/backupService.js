@@ -2,7 +2,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const fsp = fs.promises;
-const { query, queryDb } = require('../config/database');
+const { query } = require('../config/database');
 const logger = require('../config/logger');
 
 const os = require('os');
@@ -69,21 +69,23 @@ async function createBackup(userId, type = 'manual') {
   logger.info('[Backup] Dumping databases', { dbs: allDbs });
 
   // Use --databases flag so mysqldump includes CREATE DATABASE + USE statements
+  // Password is passed via MYSQL_PWD env var (not -p<password> argv) so it never
+  // appears in the OS process list for other local users to read.
   const buildArgs = (dbs) => [
     `-h${dbHost}`,
     `-P${dbPort}`,
     `-u${dbUser}`,
-    ...(dbPass ? [`-p${dbPass}`] : []),
     '--databases',
     ...dbs,
   ];
+  const dumpEnv = { ...process.env, ...(dbPass ? { MYSQL_PWD: dbPass } : {}) };
 
   const dumpPath = process.env.MARIADB_DUMP_PATH || 'mariadb-dump';
 
   const runDump = (executable) =>
     new Promise((resolve, reject) => {
       const args = buildArgs(allDbs);
-      const proc = spawn(executable, args, { shell: false });
+      const proc = spawn(executable, args, { shell: false, env: dumpEnv });
       const out = fs.createWriteStream(filepath);
       proc.stdout.pipe(out);
       let stderr = '';
@@ -140,13 +142,13 @@ async function restoreBackup(filename) {
     `-h${dbHost}`,
     `-P${dbPort}`,
     `-u${dbUser}`,
-    ...(dbPass ? [`-p${dbPass}`] : []),
     dbName,
   ];
+  const restoreEnv = { ...process.env, ...(dbPass ? { MYSQL_PWD: dbPass } : {}) };
 
   const runRestore = (executable) =>
     new Promise((resolve, reject) => {
-      const proc = spawn(executable, buildArgs(), { shell: false });
+      const proc = spawn(executable, buildArgs(), { shell: false, env: restoreEnv });
       const inp = fs.createReadStream(filepath);
       inp.pipe(proc.stdin);
       let stderr = '';
@@ -193,58 +195,6 @@ async function deleteBackupFile(filename) {
 
 function getBackupDir() {
   return BACKUP_DIR;
-}
-
-// Create a backup for ONE tenant's DB only — used by per-tenant scheduler
-async function createTenantBackup(tenantDbName, type = 'scheduled') {
-  const safeName = tenantDbName.replace(/[^a-zA-Z0-9_]/g, '_');
-  const filename = `backup_${safeName}_${getTimestamp()}.sql`;
-  const filepath = path.join(BACKUP_DIR, filename);
-
-  const dbHost = process.env.DB_HOST || 'localhost';
-  const dbPort = process.env.DB_PORT || '3306';
-  const dbUser = process.env.DB_USER || 'root';
-  const dbPass = process.env.DB_PASSWORD || '';
-
-  const buildArgs = () => [
-    `-h${dbHost}`, `-P${dbPort}`, `-u${dbUser}`,
-    ...(dbPass ? [`-p${dbPass}`] : []),
-    tenantDbName,
-  ];
-
-  const dumpPath = process.env.MARIADB_DUMP_PATH || 'mariadb-dump';
-
-  const runDump = (executable) => new Promise((resolve, reject) => {
-    const proc = spawn(executable, buildArgs(), { shell: false });
-    const out = fs.createWriteStream(filepath);
-    proc.stdout.pipe(out);
-    let stderr = '';
-    proc.stderr.on('data', (d) => { stderr += d.toString(); });
-    proc.on('close', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`${executable} failed (code ${code}): ${stderr.slice(0, 200)}`));
-    });
-    proc.on('error', reject);
-  });
-
-  try {
-    try { await runDump(dumpPath); } catch { await runDump('mysqldump'); }
-
-    const stats = await fsp.stat(filepath);
-    await queryDb(tenantDbName,
-      'INSERT INTO backups (filename, file_size, created_by, type, status) VALUES (?, ?, NULL, ?, ?)',
-      [filename, stats.size, type, 'completed']
-    );
-    return { filename, filepath };
-  } catch (err) {
-    try {
-      await queryDb(tenantDbName,
-        'INSERT INTO backups (filename, file_size, created_by, type, status) VALUES (?, 0, NULL, ?, ?)',
-        [filename, type, 'failed']
-      );
-    } catch (_e) { /* silent */ }
-    throw err;
-  }
 }
 
 // ── Retention policy ──────────────────────────────────────────
@@ -323,4 +273,4 @@ async function verifyLastBackup() {
   return { ok: true, filename: latest.filename, sizeBytes: latest.size };
 }
 
-module.exports = { createBackup, createTenantBackup, restoreBackup, listBackupFiles, deleteBackupFile, getBackupDir, pruneOldBackups, verifyLastBackup };
+module.exports = { createBackup, restoreBackup, listBackupFiles, deleteBackupFile, getBackupDir, pruneOldBackups, verifyLastBackup };

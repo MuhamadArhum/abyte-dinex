@@ -4,13 +4,18 @@ const { logAction } = require('../services/auditService');
 
 const pad = (n) => String(n).padStart(6, '0');
 
-async function nextPRNumber() {
-  const [last] = await query('SELECT pr_number FROM purchase_returns ORDER BY pr_id DESC LIMIT 1');
-  if (last?.pr_number) {
-    const m = last.pr_number.match(/\d+$/);
-    if (m) return `PR${pad(parseInt(m[0]) + 1)}`;
+async function nextPRNumber(conn) {
+  await conn.query("SELECT GET_LOCK('pr_number_gen', 10)");
+  try {
+    const [last] = await conn.query('SELECT pr_number FROM purchase_returns ORDER BY pr_id DESC LIMIT 1');
+    if (last?.pr_number) {
+      const m = last.pr_number.match(/\d+$/);
+      if (m) return `PR${pad(parseInt(m[0]) + 1)}`;
+    }
+    return `PR${pad(1)}`;
+  } finally {
+    await conn.query("SELECT RELEASE_LOCK('pr_number_gen')");
   }
-  return `PR${pad(1)}`;
 }
 
 // GET all purchase returns
@@ -78,7 +83,7 @@ exports.create = async (req, res) => {
     }
 
     await conn.beginTransaction();
-    const pr_number = await nextPRNumber();
+    const pr_number = await nextPRNumber(conn);
     const total = items.reduce((s, i) => s + Number(i.quantity_returned) * Number(i.unit_price), 0);
 
     const result = await conn.query(

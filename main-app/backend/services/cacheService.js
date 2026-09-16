@@ -117,16 +117,7 @@ exports.del = (key) => _getCache().del(key);
 
 exports.delPattern = (pattern) => _getCache().delPattern(pattern);
 
-// Invalidate all permission entries for a tenant's role (call after role_permissions changes)
-exports.invalidatePermissions = (tenantDb, roleName) =>
-  _getCache().delPattern(`perm:${tenantDb}:${roleName}:*`);
-
-// Invalidate all permission entries for an entire tenant (e.g. after bulk import)
-exports.invalidateTenantPermissions = (tenantDb) =>
-  _getCache().delPattern(`perm:${tenantDb}:*`);
-
-// Invalidate settings for a tenant
-exports.invalidateSettings = (tenantDb) =>
-  _getCache().del(`settings:${tenantDb}`);
+// Invalidate the cached store settings (single-tenant — one settings row, one key)
+exports.invalidateSettings = () => _getCache().del('settings:');
 
 exports.isRedis = () => _getCache().isRedis();

@@ -156,6 +156,7 @@ exports.updateProfile = async (req, res) => {
       const hash = await bcrypt.hash(new_password, 10);
       updates.push('password_hash = ?');
       params.push(hash);
+      updates.push('password_changed_at = NOW()');
     }
 
     if (updates.length === 0) return res.status(400).json({ message: 'No changes provided' });
@@ -242,7 +243,7 @@ exports.resetPassword = async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
     await query(
-      'UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE user_id = ?',
+      'UPDATE users SET password_hash = ?, password_changed_at = NOW(), reset_token = NULL, reset_token_expires = NULL WHERE user_id = ?',
       [hash, rows[0].user_id]
     );
 
