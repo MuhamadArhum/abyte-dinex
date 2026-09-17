@@ -27,6 +27,7 @@ function buildTestApp() {
   app.use('/api/customers',         require('../../routes/customerRoutes'));
   app.use('/api/settings',          require('../../routes/settingsRoutes'));
   app.use('/api/permissions',       require('../../routes/permissionRoutes'));
+  app.use('/api/ai',                require('../../routes/aiRoutes'));
   // Sales
   app.use('/api/sales',             require('../../routes/salesRoutes'));
   app.use('/api/register',          require('../../routes/registerRoutes'));

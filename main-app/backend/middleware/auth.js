@@ -101,11 +101,17 @@ const _checkPermDb = async (roleName, moduleKey, parts, action) => {
   return rows.length > 0;
 };
 
-const requirePermission = (moduleKey) => async (req, res, next) => {
+// asView: true skips the HTTP-method → CRUD-suffix mapping (e.g. POST → .create)
+// and always checks moduleKey as a plain view permission. Use this for endpoints
+// that are POST/PUT for request-shape reasons (e.g. a body payload) but are
+// semantically a read, not a create/update (e.g. the AI chat endpoint reading
+// report-level data) — otherwise the CRUD mapping would require a permission
+// key like "sales.reports.create" that no report-viewer role would ever have.
+const requirePermission = (moduleKey, { asView = false } = {}) => async (req, res, next) => {
   if (req.user.role_name === 'Admin') return next();
   try {
     const parts      = moduleKey.split('.');
-    const action     = METHOD_ACTION[req.method];
+    const action     = asView ? undefined : METHOD_ACTION[req.method];
     const effectiveKey = (parts.length === 2 && action) ? `${moduleKey}.${action}` : moduleKey;
     const cacheKey   = `perm:${req.user.role_name}:${effectiveKey}`;
 

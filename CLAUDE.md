@@ -10,8 +10,8 @@ Abyte Dinex is a **single-tenant** Point-of-Sale / ERP system, deployed one inst
 
 | App | Path | Port | Stack |
 |-----|------|------|-------|
-| Backend | `main-app/backend/` | 5000 | Node.js + Express + MariaDB |
-| Frontend | `main-app/frontend/` | 5173 (dev) | React 19 + TypeScript + Vite + Tailwind |
+| Backend | `main-app/backend/` | `PORT` env var (`.env.example` suggests 5000; this repo's committed Vite proxy expects 3004 — see below) | Node.js + Express + MariaDB |
+| Frontend | `main-app/frontend/` | 5175 (dev) | React 19 + TypeScript + Vite + Tailwind |
 | Printer Agent | `printer-agent/` | — | Electron/Node desktop app, polls the backend for print jobs |
 | Waiter App | `waiter-app/` | — | Expo/React Native mobile-facing app |
 
@@ -46,7 +46,7 @@ npm run db:status               # check DB/migration status
 
 ### Frontend (main-app/frontend)
 ```bash
-npm run dev       # start Vite dev server (port 5173)
+npm run dev       # start Vite dev server (port 5175, per vite.config.ts)
 npm run build     # TypeScript check + production build
 npm run lint      # ESLint
 npm test          # Vitest (run once)
@@ -58,10 +58,10 @@ Backend requires `.env` in `main-app/backend/`. Copy from `.env.example` and set
 - `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (default: `abyte_pos`), `DB_PORT`
 - `JWT_SECRET` — generate: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"`. Startup refuses to run in production with a missing/default/short secret.
 - `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_FROM` — for email features (password reset, invoice emails)
-- `PORT=5000`
+- `PORT` — `.env.example` suggests `5000`, but `main-app/frontend/vite.config.ts`'s dev proxy (`server.proxy['/api'].target`) is committed as `http://localhost:3004`. Either set your local backend `PORT=3004` to match the committed proxy, or edit `vite.config.ts` if you intentionally want a different port — the two must agree for `npm run dev` to reach the API.
 - `MASTER_DB_NAME` in `.env.example` is a **legacy leftover** — nothing reads it. Don't set it expecting it to do anything.
 
-Frontend uses `VITE_API_URL` to point at the backend. In dev, Vite proxies `/api` to `localhost:5000` automatically.
+Frontend uses `VITE_API_URL` in production builds to point at the backend. In dev, Vite's dev server (port 5175) proxies `/api` to the hardcoded target in `vite.config.ts` (currently `http://localhost:3004`) — it does not read `PORT` from any env file.
 
 ### Deployment model
 Code comments indicate this app runs in (at least) two postures: a local LAN HTTP deployment (HSTS is deliberately disabled for this — see `server.js`) and, separately, references to waking a Render-hosted instance (`/api/ping`). Confirm with whoever owns deployment which posture applies before changing security headers, CORS, or anything HTTPS-related.

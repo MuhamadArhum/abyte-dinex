@@ -121,7 +121,7 @@ async function getSystemContext(tenantDb) {
       customersSummary, topCustomers, creditCustomers, allCustomers,
 
       // ── SYSTEM ─────────────────────────────────────────────────────
-      registerStatus, usersList,
+      registerStatus,
 
     ] = await Promise.all([
 
@@ -266,9 +266,6 @@ async function getSystemContext(tenantDb) {
       // ════════════ SYSTEM ════════════
       sq(`SELECT status, opening_balance AS opening_amount, closing_balance AS closing_amount, opened_at
           FROM cash_registers ORDER BY register_id DESC LIMIT 1`),
-
-      sq(`SELECT u.name, u.email, r.role_name FROM users u
-          JOIN roles r ON u.role_id=r.role_id WHERE u.is_active=1 ORDER BY u.name`),
     ]);
 
     // ── Derived values ─────────────────────────────────────────────
@@ -385,9 +382,6 @@ ${allCustomers.map(c=>`• [${c.customer_id}] ${c.customer_name} | ${c.phone||''
 --- CASH REGISTER ---
 • ${registerInfo}
 
---- SYSTEM USERS ---
-${usersList.map(u=>`• Name: ${u.name} | Email: ${u.email} | Role: ${u.role_name}`).join('\n')||'• No users'}
-
 === END OF BUSINESS DATA ===`;
 
     contextCache.set(tenantDb, { context: contextStr, builtAt: Date.now() });
@@ -434,7 +428,7 @@ Instructions:
 - Be concise but complete — show all relevant data when asked
 - You CAN answer questions about specific sales, products, customers, purchase orders
 - If asked where a report or feature is located, use the APP NAVIGATION GUIDE above to point to the exact menu and item name
-- Each user record has three SEPARATE fields — Name, Email, Role. Never mix them up: a person's Name (e.g. "Administrator") is not their Role (e.g. "Admin") even when the words look similar. Copy the exact value after "Role:" for the role, and the exact value after "Name:" for the name — do not swap or guess.
+- You do NOT have access to staff/user account details (names, emails, roles) — if asked about system users, say that's managed in System → Users and you don't have visibility into it
 - Keep responses under 400 words unless a full list is requested`
       }
     ];
