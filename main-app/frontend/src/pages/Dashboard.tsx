@@ -7,8 +7,8 @@ import { motion } from 'framer-motion';
 import {
   DollarSign, ShoppingBag, ShoppingCart, AlertTriangle, TrendingUp,
   TrendingDown, Plus, Package, CreditCard, ArrowRight,
-  Clock, CheckCircle, Box, RefreshCw, Truck, UserCheck, UserX,
-  Bell, Activity, AlertCircle
+  Clock, CheckCircle, Box, RefreshCw, Truck, Users,
+  Bell, AlertCircle
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -83,7 +83,6 @@ interface ChartDataPoint { name: string; sales: number; orders: number; date?: s
 interface RecentOrder { sale_id: number; total: number; customer_name: string; created_at: string; status: string }
 interface TopProduct { product_id: number; product_name: string; quantity_sold: number; revenue: number }
 interface LowStockItem { product_id: number; product_name: string; quantity: number; min_stock: number; unit?: string }
-interface AttendanceSummary { total: number; present: number; absent: number; unmarked: number; half_day: number; leave: number }
 
 const fadeList = {
   hidden: {},
@@ -96,7 +95,7 @@ const fadeItem = {
 
 const Dashboard = () => {
   const { currencySymbol: currency } = useSettings();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalSales: 0, orderCount: 0, lowStockCount: 0, customerCount: 0,
     todayRevenue: 0, weekRevenue: 0, monthRevenue: 0, revenueGrowth: 0, ordersGrowth: 0, pendingDeliveries: 0
@@ -105,12 +104,10 @@ const Dashboard = () => {
   const [recentOrders, setRecentOrders]     = useState<RecentOrder[]>([]);
   const [topProducts, setTopProducts]       = useState<TopProduct[]>([]);
   const [lowStockItems, setLowStockItems]   = useState<LowStockItem[]>([]);
-  const [attendance, setAttendance]         = useState<AttendanceSummary>({ total: 0, present: 0, absent: 0, unmarked: 0, half_day: 0, leave: 0 });
   const [loading, setLoading]               = useState(true);
   const [refreshing, setRefreshing]         = useState(false);
   const [fetchError, setFetchError]         = useState<string | null>(null);
   const [chartPeriod, setChartPeriod]       = useState<'week' | 'month' | 'year'>('week');
-  const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => { fetchDashboardData(); }, [chartPeriod]);
 
@@ -120,14 +117,18 @@ const Dashboard = () => {
     try {
       const daysBack = chartPeriod === 'month' ? 30 : chartPeriod === 'year' ? 365 : 7;
       const startDate = new Date(Date.now() - daysBack * 86400000).toISOString().split('T')[0];
-      const [dashRes, inventoryRes, customersRes, recentOrdersRes, productReportRes, lowStockRes, attendanceRes, deliveriesRes] = await Promise.all([
-        api.get(`/reports/dashboard?chart_start=${startDate}`),
+      // Every call below is individually caught: a role without full sales/reports/
+      // customer permissions (e.g. Cashier, Waiter) will get a 403 on one or more
+      // of these, and an uncaught rejection inside Promise.all used to fail the
+      // *entire* dashboard load with a generic "Something went wrong" error
+      // instead of just rendering that one section with its zero/empty fallback.
+      const [dashRes, inventoryRes, customersRes, recentOrdersRes, productReportRes, lowStockRes, deliveriesRes] = await Promise.all([
+        api.get(`/reports/dashboard?chart_start=${startDate}`).catch(() => ({ data: {} })),
         api.get('/inventory-reports/summary').catch(() => ({ data: {} })),
-        api.get('/customers?page=1&limit=1'),
-        api.get('/sales?page=1&limit=5'),
+        api.get('/customers?page=1&limit=1').catch(() => ({ data: { pagination: { total: 0 } } })),
+        api.get('/sales?page=1&limit=5').catch(() => ({ data: { data: [] } })),
         api.get('/reports/product').catch(() => ({ data: { data: [] } })),
         api.get('/inventory-reports/low-stock?limit=6').catch(() => ({ data: { data: [] } })),
-        api.get(`/staff/reports/daily-attendance?date=${today}`).catch(() => ({ data: { summary: {} } })),
         api.get('/deliveries?status=pending&page=1&limit=1').catch(() => ({ data: { pagination: { total: 0 } } })),
       ]);
       const d = dashRes.data;
@@ -145,8 +146,6 @@ const Dashboard = () => {
         pendingDeliveries: deliveriesRes.data.pagination?.total || 0,
       });
       setLowStockItems((lowStockRes.data.data || []).slice(0, 6));
-      const att = attendanceRes.data.summary || {};
-      setAttendance({ total: att.total || 0, present: att.present || 0, absent: att.absent || 0, unmarked: att.unmarked || 0, half_day: att.half_day || 0, leave: att.leave || 0 });
       const chartMap = new Map<string, ChartDataPoint>();
       (d.chart || []).forEach((row: any) => {
         const name = chartPeriod === 'year'
@@ -179,14 +178,17 @@ const Dashboard = () => {
     }
   };
 
+  // permission: null = always shown (matches App.tsx's route guard for that path,
+  // or App.tsx's own "unguarded" comment for /pos). Filtered before render so a
+  // role like Cashier/Waiter isn't shown links to pages it will get a 403 on.
   const quickActions = [
-    { label: 'New Sale',      icon: ShoppingCart, path: '/pos',              color: 'bg-emerald-100 text-emerald-600' },
-    { label: 'Add Product',   icon: Plus,         path: '/products',         color: 'bg-violet-100  text-violet-600'  },
-    { label: 'Deliveries',    icon: Truck,        path: '/deliveries',       color: 'bg-blue-100    text-blue-600'    },
-    { label: 'Attendance',    icon: UserCheck,    path: '/daily-attendance', color: 'bg-cyan-100    text-cyan-600'    },
-    { label: 'Payroll',       icon: DollarSign,   path: '/payroll',          color: 'bg-amber-100   text-amber-600'   },
-    { label: 'Reports',       icon: TrendingUp,   path: '/reports',          color: 'bg-rose-100    text-rose-600'    },
-  ];
+    { label: 'New Sale',      icon: ShoppingCart, path: '/pos',              color: 'bg-emerald-100 text-emerald-600', permission: 'sales.pos' },
+    { label: 'Add Product',   icon: Plus,         path: '/products',         color: 'bg-violet-100  text-violet-600',  permission: 'inventory.products' },
+    { label: 'Deliveries',    icon: Truck,        path: '/deliveries',       color: 'bg-blue-100    text-blue-600',    permission: 'sales.deliveries' },
+    { label: 'Purchase Order',icon: Package,      path: '/purchase-orders',  color: 'bg-cyan-100    text-cyan-600',    permission: 'inventory.purchases' },
+    { label: 'Customers',     icon: Users,        path: '/customers',        color: 'bg-amber-100   text-amber-600',   permission: 'sales.customers' },
+    { label: 'Reports',       icon: TrendingUp,   path: '/sales-reports',    color: 'bg-rose-100    text-rose-600',    permission: 'sales.reports' },
+  ].filter(a => hasPermission(a.permission));
 
   return (
     <motion.div
@@ -376,11 +378,11 @@ const Dashboard = () => {
         </motion.div>
       )}
 
-      {/* ── ROW 4: Alerts + Attendance ── */}
+      {/* ── ROW 4: Stock Alerts ── */}
       {!loading && (
         <motion.div
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38, duration: 0.4 }}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+          className="grid grid-cols-1 gap-6"
         >
           {/* Low Stock Alert */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -427,62 +429,6 @@ const Dashboard = () => {
               <div className="flex flex-col items-center justify-center py-8 text-gray-400">
                 <CheckCircle size={28} className="mb-2 text-emerald-400" />
                 <p className="text-sm font-medium text-emerald-600">All stock levels are healthy</p>
-              </div>
-            )}
-          </div>
-
-          {/* Today's Attendance */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-cyan-100 rounded-xl flex items-center justify-center">
-                  <UserCheck size={15} className="text-cyan-600" />
-                </div>
-                <h2 className="text-sm font-semibold text-gray-800">Today's Attendance</h2>
-              </div>
-              <Link to="/daily-attendance" className="text-emerald-600 text-xs hover:text-emerald-700 flex items-center gap-1 font-medium">
-                Manage <ArrowRight size={12} />
-              </Link>
-            </div>
-
-            {attendance.total > 0 ? (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                  {[
-                    { label: 'Present', value: attendance.present, color: 'bg-emerald-50 text-emerald-700', icon: UserCheck },
-                    { label: 'Absent',  value: attendance.absent,  color: 'bg-red-50 text-red-600',         icon: UserX },
-                    { label: 'Leave',   value: attendance.leave + attendance.half_day, color: 'bg-amber-50 text-amber-600', icon: Clock },
-                  ].map(s => (
-                    <div key={s.label} className={`rounded-xl p-3 text-center ${s.color}`}>
-                      <p className="text-2xl font-black">{s.value}</p>
-                      <p className="text-xs font-medium mt-0.5">{s.label}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                    <span>Attendance rate</span>
-                    <span className="font-semibold text-gray-700">
-                      {attendance.total > 0 ? Math.round((attendance.present / attendance.total) * 100) : 0}%
-                    </span>
-                  </div>
-                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden flex gap-0.5">
-                    {attendance.present > 0 && <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(attendance.present / attendance.total) * 100}%` }} />}
-                    {attendance.absent > 0  && <div className="h-full bg-red-400 rounded-full"     style={{ width: `${(attendance.absent  / attendance.total) * 100}%` }} />}
-                    {(attendance.leave + attendance.half_day) > 0 && <div className="h-full bg-amber-400 rounded-full" style={{ width: `${((attendance.leave + attendance.half_day) / attendance.total) * 100}%` }} />}
-                  </div>
-                  {attendance.unmarked > 0 && (
-                    <p className="text-xs text-amber-600 font-medium flex items-center gap-1 mt-2">
-                      <Activity size={11} /> {attendance.unmarked} staff not yet marked
-                    </p>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-                <UserCheck size={28} className="mb-2 opacity-40" />
-                <p className="text-sm">No attendance data for today</p>
-                <Link to="/daily-attendance" className="text-xs text-emerald-600 mt-1 font-medium hover:underline">Mark attendance →</Link>
               </div>
             )}
           </div>

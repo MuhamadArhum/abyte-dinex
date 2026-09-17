@@ -154,7 +154,7 @@ const ProductVariants = () => {
         sku: form.sku.trim() || null,
         barcode: form.barcode.trim() || null,
         price_adjustment: parseFloat(form.price_adjustment) || 0,
-        initial_stock: editVariant ? undefined : (parseInt(form.initial_stock) || 0),
+        initial_stock: editVariant ? undefined : (parseFloat(form.initial_stock) || 0),
         combinations: [],
       };
       if (editVariant) {
@@ -184,7 +184,7 @@ const ProductVariants = () => {
 
   const handleAdjustStock = async () => {
     if (!stockVariant) return;
-    const qty = parseInt(stockQty);
+    const qty = parseFloat(stockQty);
     if (isNaN(qty)) { error('Enter valid quantity'); return; }
     setAdjustingStock(true);
     try {

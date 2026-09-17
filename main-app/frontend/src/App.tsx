@@ -235,6 +235,13 @@ function App() {
                                   <Route path="/email-settings" element={<G k="system.settings"><EmailSettings /></G>} />
                                   <Route path="/tenants"        element={<Suspense fallback={<PageLoader />}><AdminGuard><Tenants /></AdminGuard></Suspense>} />
                                   <Route path="/help"           element={<HelpSupport />} />
+
+                                  {/* Any authenticated URL that doesn't match a route above previously
+                                      rendered a blank page (Layout chrome with no content) because only
+                                      the outer, pre-login <Routes> had a catch-all — that one never
+                                      matches once authenticated, since the outer "/*" route always wins
+                                      first and delegates to this inner block. */}
+                                  <Route path="*" element={<NotFound />} />
                                 </Routes>
                               </Suspense>
                             </ErrorBoundary>

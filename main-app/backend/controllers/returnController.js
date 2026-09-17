@@ -188,8 +188,12 @@ exports.getSaleForReturn = async (req, res) => {
   try {
     const { saleId } = req.params;
 
+    // sales.customer_name (from s.*) already holds the display name captured at
+    // sale time — don't also select customers.customer_name, or MariaDB rejects
+    // the result set with "duplicate field name" (same fix applied in
+    // salesController.js's getById, which this mirrors).
     const sale = await query(
-      `SELECT s.*, c.customer_name, u.name as cashier_name
+      `SELECT s.*, u.name as cashier_name
        FROM sales s
        LEFT JOIN customers c ON s.customer_id = c.customer_id
        LEFT JOIN users u ON s.user_id = u.user_id

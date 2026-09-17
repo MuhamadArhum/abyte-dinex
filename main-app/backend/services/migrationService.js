@@ -702,6 +702,29 @@ const MIGRATIONS = [
       await queryDb(db, `ALTER TABLE purchase_order_items MODIFY COLUMN quantity_received DECIMAL(15,3) DEFAULT 0`);
     },
   },
+  {
+    version: 30,
+    name: 'fix_waiter_customers_permission_key',
+    // Migration v6 seeded the Waiter role with the permission key "customers",
+    // but no route anywhere checks that key — customerRoutes.js checks
+    // "sales.pos" (view) and "sales.customers" (create/update/delete). The
+    // Waiter role could therefore view customers (via its separately-granted
+    // sales.pos key) but could never create one, despite apparently being
+    // granted a "customers" permission. Correct the key to the one actually
+    // enforced, rather than leave a permission that does nothing.
+    async run(db) {
+      await queryDb(db,
+        `UPDATE IGNORE role_permissions SET module_key = 'sales.customers' WHERE role_name = 'Waiter' AND module_key = 'customers'`
+      );
+      // In case a Waiter row already had both keys (UPDATE IGNORE would then
+      // skip the update above due to the unique_role_module key), make sure
+      // sales.customers ends up granted either way, then drop the dead key.
+      await queryDb(db,
+        `INSERT IGNORE INTO role_permissions (role_name, module_key, is_allowed) VALUES ('Waiter', 'sales.customers', 1)`
+      );
+      await queryDb(db, `DELETE FROM role_permissions WHERE role_name = 'Waiter' AND module_key = 'customers'`);
+    },
+  },
 ];
 
 async function ensureMigrationsTable(db) {

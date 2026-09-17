@@ -111,7 +111,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSu
   };
 
   const validateStock = (value: string) => {
-    const num = parseInt(value);
+    const num = parseFloat(value);
     return !isNaN(num) && num >= 0;
   };
 
@@ -153,7 +153,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSu
         category_id: categoryId ? parseInt(categoryId) : null,
         price: parseFloat(price),
         cost_price: costPrice ? parseFloat(costPrice) : null,
-        stock_quantity: parseInt(stock),
+        stock_quantity: parseFloat(stock),
         min_stock_level: minStock ? parseInt(minStock) : null,
         barcode: barcode || null,
         sku: sku || null,
@@ -349,6 +349,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSu
                     <Boxes className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                     <input
                       type="number"
+                      step="0.001"
                       required
                       value={stock}
                       onChange={(e) => setStock(e.target.value)}

@@ -236,10 +236,10 @@ const CashRegister = () => {
   const cardSales = parseFloat(register.card_sales_total);
   const opening = parseFloat(register.opening_balance);
   const shiftExpenses = register.shift_expenses || 0;
-  // Expected = Opening Balance + Cash Sales - Expenses
-  const expectedCash = opening + cashSales - shiftExpenses;
   const cashIn = parseFloat(register.total_cash_in || '0');
   const cashOut = parseFloat(register.total_cash_out || '0');
+  // Expected = Opening Balance + Cash Sales + Cash In - Cash Out - Expenses
+  const expectedCash = opening + cashSales + cashIn - cashOut - shiftExpenses;
 
   return (
     <div className="p-4 sm:p-6">

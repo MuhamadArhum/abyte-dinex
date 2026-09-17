@@ -474,14 +474,18 @@ exports.adjustVariantStock = async (req, res) => {
     await conn.beginTransaction();
 
     const { variant_id } = req.params;
-    const { adjustment, reason } = req.body;
+    // Frontend (ProductVariants.tsx) sends { quantity, reason } — this previously
+    // destructured a non-existent "adjustment" field, so every request landed on
+    // the "required" 400 below regardless of what the user entered.
+    const { quantity, reason } = req.body;
 
-    if (adjustment === undefined || adjustment === null) {
+    if (quantity === undefined || quantity === null) {
       await conn.rollback();
       return res.status(400).json({ message: 'Adjustment amount is required' });
     }
 
-    const adjustmentNum = parseInt(adjustment);
+    // Raw materials/semi-finished variants can carry fractional quantities.
+    const adjustmentNum = parseFloat(quantity);
     if (isNaN(adjustmentNum)) {
       await conn.rollback();
       return res.status(400).json({ message: 'Invalid adjustment amount' });

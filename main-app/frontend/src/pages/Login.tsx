@@ -9,7 +9,7 @@ const features = [
   { icon: ShoppingCart, label: 'Point of Sale', desc: 'Fast & intuitive POS system' },
   { icon: BarChart3, label: 'Sales Analytics', desc: 'Real-time reports & insights' },
   { icon: Package, label: 'Inventory Control', desc: 'Stock tracking & alerts' },
-  { icon: Users, label: 'HR Management', desc: 'Staff, attendance & payroll' },
+  { icon: Users, label: 'Customer Management', desc: 'Credit sales, balances & history' },
 ];
 
 const Login = () => {

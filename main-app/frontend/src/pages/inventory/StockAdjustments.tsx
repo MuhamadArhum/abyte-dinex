@@ -141,7 +141,7 @@ const StockAdjustments = () => {
 
   const calculateAfter = () => {
     if (!selectedProduct || !formQty || !formType) return null;
-    const qty = parseInt(formQty);
+    const qty = parseFloat(formQty);
     if (isNaN(qty) || qty <= 0) return null;
     const before = selectedProduct.stock_quantity ?? selectedProduct.available_stock ?? 0;
     if (formType === 'correction') return qty;
@@ -152,7 +152,7 @@ const StockAdjustments = () => {
   const handleCreate = async () => {
     if (!selectedProduct) { setFormError('Select a product'); return; }
     if (!formType) { setFormError('Select adjustment type'); return; }
-    if (!formQty || parseInt(formQty) <= 0) { setFormError('Enter valid quantity'); return; }
+    if (!formQty || parseFloat(formQty) <= 0) { setFormError('Enter valid quantity'); return; }
 
     const afterQty = calculateAfter();
     if (afterQty !== null && afterQty < 0) { setFormError('Insufficient stock for this adjustment'); return; }
@@ -163,7 +163,7 @@ const StockAdjustments = () => {
       await api.post('/stock-adjustments', {
         product_id: selectedProduct.product_id,
         adjustment_type: formType,
-        quantity_adjusted: parseInt(formQty),
+        quantity_adjusted: parseFloat(formQty),
         reason: formReason || null,
         reference_number: formRef || null,
       });
@@ -435,7 +435,8 @@ const StockAdjustments = () => {
                 </label>
                 <input
                   type="number"
-                  min="1"
+                  min="0.001"
+                  step="0.001"
                   value={formQty}
                   onChange={(e) => setFormQty(e.target.value)}
                   placeholder={formType === 'correction' ? 'Set exact stock level' : 'Enter quantity'}

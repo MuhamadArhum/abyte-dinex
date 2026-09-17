@@ -1,13 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, ArrowLeft, Search, LayoutDashboard, ShoppingCart, Package, Users, DollarSign } from 'lucide-react';
+import { Home, ArrowLeft, Search, LayoutDashboard, ShoppingCart, Package, Users, TrendingUp } from 'lucide-react';
 
 const quickLinks = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/', color: 'text-blue-500 bg-blue-50 border-blue-100' },
   { icon: ShoppingCart,   label: 'POS',       path: '/pos', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
   { icon: Package,        label: 'Inventory', path: '/products', color: 'text-purple-600 bg-purple-50 border-purple-100' },
-  { icon: Users,          label: 'HR',        path: '/staff', color: 'text-cyan-600 bg-cyan-50 border-cyan-100' },
-  { icon: DollarSign,     label: 'Accounts',  path: '/chart-of-accounts', color: 'text-rose-600 bg-rose-50 border-rose-100' },
+  { icon: Users,          label: 'Customers', path: '/customers', color: 'text-cyan-600 bg-cyan-50 border-cyan-100' },
+  { icon: TrendingUp,     label: 'Reports',   path: '/reports', color: 'text-rose-600 bg-rose-50 border-rose-100' },
   { icon: Search,         label: 'Help',      path: '/help', color: 'text-gray-600 bg-gray-50 border-gray-100' },
 ];
 

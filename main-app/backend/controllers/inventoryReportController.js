@@ -822,64 +822,17 @@ exports.getPurchaseReturns = async (req, res) => {
 };
 
 // ── 3. Stock Transfer Report ──────────────────────────────────
+// The multi-store stock-transfer feature (and its stock_transfers/stores
+// tables) was removed in migration v22 (single-tenant conversion). This
+// endpoint is still called unconditionally from InventoryReports.tsx's
+// Promise.all — returning 500 here used to fail that entire batch and
+// blank out every other report on the page, not just this one. Return an
+// empty report instead of querying dropped tables.
 exports.getStockTransfers = async (req, res) => {
-  try {
-    const { from_date, to_date } = req.query;
-    const params = [];
-    let dateW = '';
-    if (from_date) { dateW += ' AND DATE(st.transfer_date) >= ?'; params.push(from_date); }
-    if (to_date)   { dateW += ' AND DATE(st.transfer_date) <= ?'; params.push(to_date); }
-
-    const [summary] = await query(`
-      SELECT
-        COUNT(*) as total_transfers,
-        COUNT(CASE WHEN status='completed' THEN 1 END) as completed,
-        COUNT(CASE WHEN status='pending'   THEN 1 END) as pending,
-        COUNT(CASE WHEN status='cancelled' THEN 1 END) as cancelled,
-        COALESCE(SUM(CASE WHEN status='completed' THEN quantity ELSE 0 END), 0) as total_qty_moved
-      FROM stock_transfers st WHERE 1=1 ${dateW}
-    `, params);
-
-    const data = await query(`
-      SELECT
-        st.transfer_id, st.transfer_date, st.quantity, st.status, st.notes,
-        p.product_name, p.unit,
-        fs.store_name as from_branch,
-        ts.store_name as to_branch,
-        u.name as created_by,
-        COALESCE(p.cost_price, 0) * st.quantity as transfer_value
-      FROM stock_transfers st
-      JOIN products p ON st.product_id = p.product_id
-      JOIN stores fs ON st.from_store_id = fs.store_id
-      JOIN stores ts ON st.to_store_id = ts.store_id
-      JOIN users u ON st.created_by = u.user_id
-      WHERE 1=1 ${dateW}
-      ORDER BY st.transfer_date DESC
-    `, params);
-
-    res.json({
-      summary: {
-        total_transfers: Number(summary.total_transfers),
-        completed:       Number(summary.completed),
-        pending:         Number(summary.pending),
-        cancelled:       Number(summary.cancelled),
-        total_qty_moved: Number(summary.total_qty_moved),
-      },
-      data: data.map(r => ({
-        transfer_id:    Number(r.transfer_id),
-        transfer_date:  r.transfer_date,
-        product_name:   r.product_name,
-        unit:           r.unit,
-        from_branch:    r.from_branch,
-        to_branch:      r.to_branch,
-        quantity:       Number(r.quantity),
-        status:         r.status,
-        notes:          r.notes,
-        created_by:     r.created_by,
-        transfer_value: Number(r.transfer_value),
-      })),
-    });
-  } catch (err) { logger.error(err); res.status(500).json({ message: 'Server error' }); }
+  res.json({
+    summary: { total_transfers: 0, completed: 0, pending: 0, cancelled: 0, total_qty_moved: 0 },
+    data: [],
+  });
 };
 
 // ── 4. Dead Stock Report (90+ days no movement) ───────────────

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, ChevronDown, ChevronUp, MessageCircle, Mail, BookOpen, Zap, ShoppingCart, Package, Users, DollarSign, Settings, ArrowRight, Keyboard, Video, FileText, LifeBuoy, Plus, X, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, MessageCircle, Mail, BookOpen, Zap, ShoppingCart, Package, Users, Settings, ArrowRight, Keyboard, Video, FileText, LifeBuoy, Plus, X, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import api from '../utils/api';
 
@@ -29,27 +29,14 @@ const faqs: { category: string; icon: any; color: string; items: { q: string; a:
     ],
   },
   {
-    category: 'Human Resources',
+    category: 'Customers & Credit',
     icon: Users,
     color: 'blue',
     items: [
-      { q: 'How do I mark daily attendance?', a: 'Go to HR → Daily Attendance. Select the date, then use the quick-mark buttons (P / A / L / H) next to each employee. You can also bulk-mark all as Present with one click.' },
-      { q: 'How is payroll calculated?', a: 'Payroll uses: Working Days = Calendar Days − Holidays. Daily Rate = Basic Salary ÷ Working Days. Absent Deduction = Absent Days × Daily Rate. Loan deductions are also applied automatically.' },
-      { q: 'How do I issue a loan to an employee?', a: 'Go to HR → Loans → Issue Loan. Select the employee, enter loan amount, monthly deduction, and optionally link Level-4 accounts for automatic double-entry accounting.' },
-      { q: 'How do I run payroll processing?', a: 'Go to HR → Payroll Processing. Select the date range and preview the payroll. You can add per-employee bonuses, then click Process to generate salary vouchers and post accounting entries.' },
-      { q: 'How do I print a salary slip?', a: 'Go to HR → Salary Voucher. Select the employee and month/year, then click the Print button. A formatted payslip with all deductions and a signature section is generated.' },
-    ],
-  },
-  {
-    category: 'Accounts',
-    icon: DollarSign,
-    color: 'rose',
-    items: [
-      { q: 'What is the Chart of Accounts?', a: 'The Chart of Accounts is the master list of all financial accounts organized in a 4-level hierarchy: Level 1 (Category) → Level 2 (Group) → Level 3 (Sub-Group) → Level 4 (Ledger). Only Level 4 accounts can be used in transactions.' },
-      { q: 'How do I post a journal entry?', a: 'Go to Accounts → Journal Voucher → New Entry. Add debit and credit lines (must balance to zero). Enter a description and date, then click Post. The account balances update instantly.' },
-      { q: 'What is the difference between CPV and CRV?', a: 'CPV (Cash Payment Voucher) is for recording cash outflows (expenses, payments). CRV (Cash Receipt Voucher) is for recording cash inflows (collections, receipts). Both auto-post to the General Ledger.' },
-      { q: 'How do I view a Profit & Loss report?', a: 'Go to Accounts → Profit & Loss. Select the date range. The report shows Revenue, Cost of Goods Sold, Gross Profit, Operating Expenses, and Net Profit/Loss.' },
-      { q: 'How does the Trial Balance work?', a: 'The Trial Balance lists all accounts with their debit and credit totals. If the system is balanced, total debits equal total credits. Use the 6-Column version for Opening, Movement, and Closing balances.' },
+      { q: 'How do I add a new customer?', a: 'Go to Sales → Customers → Add Customer. Enter name, phone, and optional email/address, then save. The customer becomes available to select at POS checkout.' },
+      { q: 'How does a credit sale work?', a: 'At checkout, select a named customer (not Walk-in) and choose Credit as the payment method, then set a due date. The outstanding balance is tracked under Sales → Credit Sales.' },
+      { q: 'How do I record a payment against a credit sale?', a: 'Go to Sales → Credit Sales, find the customer\'s outstanding balance, and click "Record Payment". Enter the amount and payment method — the balance updates immediately.' },
+      { q: 'How do I see a customer\'s full purchase history?', a: 'Go to Sales → Customers, open the customer, and view their sales and credit history in one place.' },
     ],
   },
   {

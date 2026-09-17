@@ -159,11 +159,15 @@ exports.create = async (req, res) => {
       [product_name, category_id || null, price || 0, stock_quantity || 0, barcode || null, product_type || 'finished_good', unit || 'pcs', cost_price || 0, min_stock_level || 0, sku || null, description || null]
     );
 
-    // Also create a corresponding inventory record to track stock separately
+    // Also create a corresponding inventory record to track stock separately.
+    // Seed avg_cost from the entered cost_price — otherwise it defaults to 0 and
+    // every subsequent purchase's weighted-average cost calculation
+    // (purchaseVoucherController.applyStockForItems) is permanently skewed low,
+    // since it would treat this opening stock as having cost nothing.
     const productId = Number(result.insertId);
     await query(
-      'INSERT INTO inventory (product_id, available_stock) VALUES (?, ?)',
-      [productId, stock_quantity || 0]
+      'INSERT INTO inventory (product_id, available_stock, avg_cost) VALUES (?, ?, ?)',
+      [productId, stock_quantity || 0, cost_price || 0]
     );
 
     await logAction(req.user.user_id, req.user.name, 'PRODUCT_CREATED', 'product', productId, { product_name, price }, req.ip);

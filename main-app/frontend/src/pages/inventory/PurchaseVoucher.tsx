@@ -248,8 +248,11 @@ const PurchaseVoucher = () => {
 
   const handleSubmit = async () => {
     if (!items.length) return error('Add at least one item');
-    if (!formPurchaseAccountId) return error('Select a Purchase Account (Debit)');
-    if (!formSupplierAccountId) return error('Select a Supplier Account (Credit)');
+    // Purchase/Supplier account linkage is optional — there is no Chart of
+    // Accounts feature in this deployment to select them from (the picker
+    // always shows "No accounts found"), and the backend never reads these
+    // fields when creating the voucher. Requiring them here would make it
+    // impossible to ever receive stock against a purchase order.
     setSaving(true);
     try {
       const payload: any = {
@@ -370,7 +373,7 @@ const PurchaseVoucher = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
                 <div>
                   <label className="block text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-1.5">
-                    Purchase Account <span className="bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded text-xs ml-1">DR</span>
+                    Purchase Account (Optional) <span className="bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded text-xs ml-1">DR</span>
                   </label>
                   <AccountSelector
                     value={formPurchaseAccountId}
@@ -378,11 +381,11 @@ const PurchaseVoucher = () => {
                     accounts={accounts}
                     placeholder="Select Purchase Account…"
                   />
-                  <p className="text-xs text-emerald-500 mt-1">e.g. Purchases, Inventory Expense</p>
+                  <p className="text-xs text-emerald-500 mt-1">Not required to receive stock — only used if you track double-entry accounting separately.</p>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-1.5">
-                    Supplier Account <span className="bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded text-xs ml-1">CR</span>
+                    Supplier Account (Optional) <span className="bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded text-xs ml-1">CR</span>
                   </label>
                   <AccountSelector
                     value={formSupplierAccountId}
@@ -390,7 +393,7 @@ const PurchaseVoucher = () => {
                     accounts={accounts}
                     placeholder="Select Supplier Account…"
                   />
-                  <p className="text-xs text-emerald-500 mt-1">e.g. Accounts Payable, Supplier A</p>
+                  <p className="text-xs text-emerald-500 mt-1">Not required to receive stock — only used if you track double-entry accounting separately.</p>
                 </div>
               </div>
 
