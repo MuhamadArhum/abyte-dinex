@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS products (
     price DECIMAL(10, 2) NOT NULL,
     selling_price DECIMAL(10, 2) DEFAULT NULL,
     cost_price DECIMAL(15, 2) DEFAULT NULL,
-    stock_quantity INT NOT NULL DEFAULT 0,
+    stock_quantity DECIMAL(15,3) NOT NULL DEFAULT 0,
     reorder_level INT DEFAULT NULL,
     min_stock_level INT DEFAULT NULL,
     has_variants TINYINT(1) DEFAULT 0,
@@ -276,7 +276,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 CREATE TABLE IF NOT EXISTS inventory (
     inventory_id INT PRIMARY KEY AUTO_INCREMENT,
     product_id INT NOT NULL UNIQUE,
-    available_stock INT NOT NULL DEFAULT 0,
+    available_stock DECIMAL(15,3) NOT NULL DEFAULT 0,
     avg_cost DECIMAL(15,4) NOT NULL DEFAULT 0,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (product_id) REFERENCES products(product_id)
@@ -333,9 +333,9 @@ CREATE TABLE IF NOT EXISTS stock_adjustments (
     variant_id INT NULL,
     store_id INT DEFAULT 1,
     adjustment_type ENUM('addition','subtraction','correction','damage','theft','return','opening_stock','expired') NOT NULL,
-    quantity_before INT NOT NULL,
-    quantity_adjusted INT NOT NULL,
-    quantity_after INT NOT NULL,
+    quantity_before DECIMAL(15,3) NOT NULL,
+    quantity_adjusted DECIMAL(15,3) NOT NULL,
+    quantity_after DECIMAL(15,3) NOT NULL,
     reason TEXT,
     reference_number VARCHAR(100),
     created_by INT NOT NULL,
@@ -423,8 +423,8 @@ CREATE TABLE IF NOT EXISTS purchase_order_items (
     po_item_id INT PRIMARY KEY AUTO_INCREMENT,
     po_id INT NOT NULL,
     product_id INT NOT NULL,
-    quantity_ordered INT NOT NULL,
-    quantity_received INT DEFAULT 0,
+    quantity_ordered DECIMAL(15,3) NOT NULL,
+    quantity_received DECIMAL(15,3) DEFAULT 0,
     unit_cost DECIMAL(10, 2) NOT NULL,
     total_cost DECIMAL(10, 2) NOT NULL,
     FOREIGN KEY (po_id) REFERENCES purchase_orders(po_id) ON DELETE CASCADE,
@@ -528,7 +528,7 @@ CREATE TABLE IF NOT EXISTS product_variants (
     sku VARCHAR(100) NOT NULL UNIQUE,
     variant_name VARCHAR(200),
     price_adjustment DECIMAL(10, 2) DEFAULT 0.00,
-    stock_quantity INT NOT NULL DEFAULT 0,
+    stock_quantity DECIMAL(15,3) NOT NULL DEFAULT 0,
     barcode VARCHAR(100) UNIQUE,
     is_active TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -927,7 +927,7 @@ CREATE TABLE IF NOT EXISTS variant_combinations (
 CREATE TABLE IF NOT EXISTS variant_inventory (
     variant_inventory_id INT PRIMARY KEY AUTO_INCREMENT,
     variant_id INT NOT NULL UNIQUE,
-    available_stock INT NOT NULL DEFAULT 0,
+    available_stock DECIMAL(15,3) NOT NULL DEFAULT 0,
     FOREIGN KEY (variant_id) REFERENCES product_variants(variant_id) ON DELETE CASCADE
 );
 

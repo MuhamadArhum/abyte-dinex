@@ -678,6 +678,30 @@ const MIGRATIONS = [
       await queryDb(db, `ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at DATETIME NULL`);
     },
   },
+  {
+    version: 29,
+    name: 'widen_stock_columns_for_fractional_quantities',
+    // Raw materials/semi-finished items are bought, sold, and adjusted in
+    // fractional quantities (e.g. 2.5 kg), and stock_layers/recipe_ingredients/
+    // opening_stock_entries already store them as DECIMAL(10-15,3). But the
+    // columns that actually track *current* stock — products.stock_quantity,
+    // inventory.available_stock, product_variants.stock_quantity,
+    // variant_inventory.available_stock — plus stock_adjustments and
+    // purchase_order_items were left as INT, silently truncating any
+    // fractional value written through them. Widen them all to DECIMAL(15,3)
+    // to match the rest of the stock-tracking schema.
+    async run(db) {
+      await queryDb(db, `ALTER TABLE products MODIFY COLUMN stock_quantity DECIMAL(15,3) NOT NULL DEFAULT 0`);
+      await queryDb(db, `ALTER TABLE inventory MODIFY COLUMN available_stock DECIMAL(15,3) NOT NULL DEFAULT 0`);
+      await queryDb(db, `ALTER TABLE product_variants MODIFY COLUMN stock_quantity DECIMAL(15,3) NOT NULL DEFAULT 0`);
+      await queryDb(db, `ALTER TABLE variant_inventory MODIFY COLUMN available_stock DECIMAL(15,3) NOT NULL DEFAULT 0`);
+      await queryDb(db, `ALTER TABLE stock_adjustments MODIFY COLUMN quantity_before DECIMAL(15,3) NOT NULL`);
+      await queryDb(db, `ALTER TABLE stock_adjustments MODIFY COLUMN quantity_adjusted DECIMAL(15,3) NOT NULL`);
+      await queryDb(db, `ALTER TABLE stock_adjustments MODIFY COLUMN quantity_after DECIMAL(15,3) NOT NULL`);
+      await queryDb(db, `ALTER TABLE purchase_order_items MODIFY COLUMN quantity_ordered DECIMAL(15,3) NOT NULL`);
+      await queryDb(db, `ALTER TABLE purchase_order_items MODIFY COLUMN quantity_received DECIMAL(15,3) DEFAULT 0`);
+    },
+  },
 ];
 
 async function ensureMigrationsTable(db) {

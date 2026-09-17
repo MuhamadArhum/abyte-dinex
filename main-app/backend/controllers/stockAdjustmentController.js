@@ -93,15 +93,19 @@ exports.getById = async (req, res) => {
 exports.create = async (req, res) => {
   const conn = await getConnection();
   try {
-    const { product_id, adjustment_type, quantity_adjusted, reason, reference_number } = req.body;
+    const { product_id, adjustment_type, reason, reference_number } = req.body;
+    // Raw materials/semi-finished items can carry fractional quantities (e.g. 2.5 kg) —
+    // cast explicitly rather than passing whatever JSON type the client sent straight
+    // into arithmetic and a DECIMAL(15,3) column.
+    const quantity_adjusted = Number(req.body.quantity_adjusted);
 
-    if (!product_id || !adjustment_type || !quantity_adjusted) {
+    if (!product_id || !adjustment_type || req.body.quantity_adjusted === undefined || req.body.quantity_adjusted === null) {
       return res.status(400).json({ message: 'Product, type, and quantity are required' });
     }
     if (!ADJUSTMENT_TYPES.includes(adjustment_type)) {
       return res.status(400).json({ message: 'Invalid adjustment type' });
     }
-    if (quantity_adjusted <= 0) {
+    if (!Number.isFinite(quantity_adjusted) || quantity_adjusted <= 0) {
       return res.status(400).json({ message: 'Quantity must be greater than 0' });
     }
 
@@ -117,7 +121,7 @@ exports.create = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    const quantity_before = product.stock_quantity || 0;
+    const quantity_before = Number(product.stock_quantity) || 0;
     let quantity_after;
 
     if (adjustment_type === 'correction') {
