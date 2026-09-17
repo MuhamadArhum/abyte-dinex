@@ -34,7 +34,7 @@ const http     = require('http');
 const https    = require('https');
 
 const app     = express();
-const PORT    = process.env.PORT || 3001;
+const PORT    = process.env.PORT || 3022;
 const VERSION = '3.1.0';
 
 // ── Config path — works both as Node script AND as pkg EXE ────
@@ -475,7 +475,7 @@ function buildUI() {
   <div class="header-logo">A</div>
   <div>
     <div class="header-title">Abyte Dinex Printer Agent</div>
-    <div class="header-sub">Local thermal printer bridge — port 3001</div>
+    <div class="header-sub">Local thermal printer bridge — port 3022</div>
   </div>
   <div class="header-right">
     <div style="display:flex;align-items:center;gap:6px;">

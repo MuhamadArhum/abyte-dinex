@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import api from '../utils/api';
 
-const AGENT_URL     = 'http://localhost:3001';
+const AGENT_URL     = 'http://localhost:3022';
 const POLL_MS       = 15000;  // poll backend every 15s
 const AGENT_CHECK_MS = 15000; // re-check agent liveness every 15s
 
@@ -54,7 +54,7 @@ async function forwardToAgent(job: { id: number; type: string; payload: any }) {
 }
 
 // Mount this hook in Layout — it runs silently in the background.
-// Only processes jobs if the Printer Agent is running on localhost:3001.
+// Only processes jobs if the Printer Agent is running on localhost:3022.
 // If no agent → jobs stay pending, no error shown to user.
 export function usePrintQueue() {
   const busyRef       = useRef(false);

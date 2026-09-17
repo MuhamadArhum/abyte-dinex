@@ -64,13 +64,17 @@ export default defineConfig({
   },
   server: {
     host: 'localhost',
-    port: 5175,
+    port: 5181,
     proxy: {
       '/api': {
-        target: 'http://localhost:3004',
+        target: 'http://localhost:3008',
         changeOrigin: false,
       }
     }
+  },
+  preview: {
+    host: 'localhost',
+    port: 5181,
   },
   build: {
     chunkSizeWarningLimit: 600,

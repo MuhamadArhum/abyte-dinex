@@ -1,5 +1,5 @@
 // Abyte Dinex Printer Agent bridge
-// Jobs go via the print queue — cashier browser picks them up and forwards to localhost:3001
+// Jobs go via the print queue — cashier browser picks them up and forwards to localhost:3022
 
 import api from '../utils/api';
 

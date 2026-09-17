@@ -103,7 +103,7 @@ app.set('trust proxy', 1);
 // ── CORS Configuration ───────────────────────────────────────
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : ['http://localhost:5173', 'http://localhost:3000'];
+  : ['http://localhost:5181', 'http://localhost:3000'];
 
 // Wildcard CORS with credentials is rejected by all browsers and is a security misconfiguration.
 if (allowedOrigins.includes('*') && process.env.NODE_ENV === 'production') {
@@ -418,7 +418,7 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 
 // ── Start Server ─────────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3008;
 const httpServer = app.listen(PORT, async () => {
   logger.info(`Abyte Dinex backend started`, {
     port:    PORT,

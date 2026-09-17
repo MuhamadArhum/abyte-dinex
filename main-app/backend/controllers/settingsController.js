@@ -335,7 +335,7 @@ exports.printViaAgent = async (req, res) => {
     const rows = await query('SELECT printer_agent_url FROM store_settings WHERE setting_id = 1');
     const agentUrl = (rows[0]?.printer_agent_url || '').trim();
     if (!agentUrl) {
-      return res.status(400).json({ message: 'Printer Agent URL not configured. Go to Settings and set the Agent URL (e.g. http://192.168.1.10:3001).' });
+      return res.status(400).json({ message: 'Printer Agent URL not configured. Go to Settings and set the Agent URL (e.g. http://192.168.1.10:3022).' });
     }
 
     const { type = 'invoice', receiptData, kotData } = req.body;
@@ -848,7 +848,7 @@ exports.getServerIp = async (req, res) => {
       }
       if (lanIp) break;
     }
-    res.json({ ip: lanIp || '127.0.0.1', port: Number(process.env.PORT) || 5000 });
+    res.json({ ip: lanIp || '127.0.0.1', port: Number(process.env.PORT) || 3008 });
   } catch (err) {
     logger.error(err);
     res.status(500).json({ message: 'Server error' });

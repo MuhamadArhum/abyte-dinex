@@ -119,7 +119,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [qrCopied, setQrCopied] = useState(false);
 
   // Server's actual LAN IP (the machine hosting the database), not the browser's hostname
-  const [waiterApiUrl, setWaiterApiUrl] = useState(() => `http://${window.location.hostname}:5000/api`);
+  const [waiterApiUrl, setWaiterApiUrl] = useState(() => `http://${window.location.hostname}:3008/api`);
   useEffect(() => {
     if (!isAdmin) return;
     api.get('/settings/server-ip')

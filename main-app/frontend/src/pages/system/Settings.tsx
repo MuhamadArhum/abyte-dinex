@@ -146,7 +146,7 @@ const Settings = () => {
   const [fbrLogs, setFbrLogs] = useState<any[]>([]);
   const [fbrLogsLoading, setFbrLogsLoading] = useState(false);
 
-  const AGENT_URL = import.meta.env.VITE_PRINTER_AGENT_URL || 'http://localhost:3001';
+  const AGENT_URL = import.meta.env.VITE_PRINTER_AGENT_URL || 'http://localhost:3022';
   const SERVER_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'https://erp.abytesol.com';
 
   const checkAgentStatus = async () => {
