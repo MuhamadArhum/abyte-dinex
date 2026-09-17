@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, ShoppingCart, Trash2, Minus, Plus, Archive, Barcode, Scan, FileText, User, UserPlus, BarChart, X, Lock, DollarSign, Loader2, ShoppingBag, Keyboard, Percent, Calculator, Tag, Phone, Truck, MapPin, CheckCircle, UtensilsCrossed, Coffee, Table2 } from 'lucide-react';
 import Pagination from '../../components/Pagination';
@@ -750,14 +750,25 @@ const POS = () => {
     }
   }, [orderType]);
 
-  const filteredCustomers = useMemo(() => {
-    if (!customerSearch.trim()) return [];
-    const q = customerSearch.toLowerCase();
-    return customers.filter((c: any) =>
-      c.customer_name.toLowerCase().includes(q) ||
-      (c.phone_number && c.phone_number.includes(customerSearch))
-    ).slice(0, 8);
-  }, [customers, customerSearch]);
+  // The `customers` list loaded by fetchCustomers() is capped at 50 rows
+  // (backend default), so filtering it client-side misses any customer
+  // outside that alphabetical page. Search the server instead.
+  const [filteredCustomers, setFilteredCustomers] = useState<any[]>([]);
+  useEffect(() => {
+    const q = customerSearch.trim();
+    if (!q) { setFilteredCustomers([]); return; }
+    const handle = setTimeout(async () => {
+      try {
+        const res = await api.get('/customers', { params: { search: q } });
+        const list = res.data.data || res.data;
+        setFilteredCustomers(Array.isArray(list) ? list.slice(0, 8) : []);
+      } catch (error) {
+        console.error('Customer search failed', error);
+        setFilteredCustomers([]);
+      }
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [customerSearch]);
 
   const handleAssignUser = async (userId: number) => {
     if (userAssigning) return;

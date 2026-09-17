@@ -415,7 +415,7 @@ const RegisterCloseModal: React.FC<RegisterCloseModalProps> = ({
             </button>
             <button
               onClick={handleClose}
-              disabled={isProcessing || !closingBalance || (isDifferenceSignificant && !showConfirmation)}
+              disabled={isProcessing || !closingBalance}
               className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg disabled:shadow-none disabled:cursor-not-allowed"
             >
               {isProcessing ? (

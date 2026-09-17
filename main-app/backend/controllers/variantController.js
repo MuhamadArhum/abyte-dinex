@@ -197,18 +197,26 @@ exports.createProductVariant = async (req, res) => {
 
     const {
       product_id,
-      sku,
       variant_name,
       price_adjustment,
-      stock_quantity,
       barcode,
       combinations // Array of variant_value_ids
     } = req.body;
+    let { sku } = req.body;
+    // The "Add Variant" form (ProductVariants.tsx) posts the opening stock
+    // as `initial_stock`, not `stock_quantity` — accept both so a variant
+    // created through the UI doesn't silently start at zero stock.
+    const stock_quantity = req.body.initial_stock ?? req.body.stock_quantity;
 
-    // Validation
-    if (!product_id || !sku || !variant_name) {
+    // Validation — the "Add Variant" form (ProductVariants.tsx) shows SKU as
+    // optional (no asterisk, unlike Variant Name), so auto-generate one
+    // rather than rejecting the request when it's left blank.
+    if (!product_id || !variant_name) {
       await conn.rollback();
-      return res.status(400).json({ message: 'Product ID, SKU, and variant name are required' });
+      return res.status(400).json({ message: 'Product ID and variant name are required' });
+    }
+    if (!sku || !sku.trim()) {
+      sku = `VAR-${product_id}-${Date.now()}`;
     }
 
     // Check if SKU already exists

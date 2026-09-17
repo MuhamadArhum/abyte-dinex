@@ -243,6 +243,17 @@ exports.recordPayment = async (req, res) => {
         [newPaidAmount, newBalanceDue, newStatus, id]
       );
 
+      // Cash collected against a credit sale is real cash into the till —
+      // without this the register's expected-cash reconciliation (which
+      // sums cash_sales_total + total_cash_in - total_cash_out) silently
+      // ignores it and the drawer comes up short at close.
+      if ((payment_method || 'Cash').toLowerCase() === 'cash') {
+        const openRegister = await conn.query("SELECT register_id FROM cash_registers WHERE status = 'open' LIMIT 1");
+        if (openRegister.length > 0) {
+          await conn.query('UPDATE cash_registers SET total_cash_in = total_cash_in + ? WHERE register_id = ?', [paymentAmount, openRegister[0].register_id]);
+        }
+      }
+
       await conn.commit();
 
       await logAction(

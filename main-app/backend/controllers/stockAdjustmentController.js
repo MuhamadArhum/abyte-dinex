@@ -151,13 +151,19 @@ exports.create = async (req, res) => {
     // Update product stock
     await conn.query('UPDATE products SET stock_quantity = ? WHERE product_id = ?', [quantity_after, product_id]);
 
-    // Update inventory — preserve avg_cost on INSERT (B-024)
-    const [existingInv] = await conn.query('SELECT avg_cost FROM inventory WHERE product_id = ?', [product_id]);
-    const existingAvgCost = existingInv?.avg_cost || 0;
-    await conn.query(
-      'INSERT INTO inventory (product_id, available_stock, avg_cost) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE available_stock = ?',
-      [product_id, quantity_after, existingAvgCost, quantity_after]
-    );
+    // Update inventory by the same delta applied to products.stock_quantity —
+    // NOT by overwriting available_stock to quantity_after. The two columns
+    // can already differ (pre-existing bulk-seed data drift), and setting
+    // available_stock to quantity_after would silently collapse that
+    // pre-existing offset instead of preserving it.
+    const delta = quantity_after - quantity_before;
+    const [existingInv] = await conn.query('SELECT avg_cost, available_stock FROM inventory WHERE product_id = ?', [product_id]);
+    if (existingInv) {
+      const newAvailable = Number(existingInv.available_stock) + delta;
+      await conn.query('UPDATE inventory SET available_stock = ? WHERE product_id = ?', [newAvailable, product_id]);
+    } else {
+      await conn.query('INSERT INTO inventory (product_id, available_stock, avg_cost) VALUES (?, ?, 0)', [product_id, quantity_after]);
+    }
 
     await conn.commit();
 
