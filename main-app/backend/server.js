@@ -104,6 +104,10 @@ app.set('trust proxy', 1);
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
   : ['http://localhost:5181', 'http://localhost:3000'];
+const localAppOrigins = [
+  `http://localhost:${process.env.PORT || 3008}`,
+  `http://127.0.0.1:${process.env.PORT || 3008}`,
+];
 
 // Wildcard CORS with credentials is rejected by all browsers and is a security misconfiguration.
 if (allowedOrigins.includes('*') && process.env.NODE_ENV === 'production') {
@@ -119,6 +123,7 @@ const corsOptions = {
     // Allow requests with no origin (e.g. same-origin, mobile apps, curl)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes('*')) return callback(null, true);
+    if (localAppOrigins.includes(origin)) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error(`CORS: Origin '${origin}' not allowed`));
   },

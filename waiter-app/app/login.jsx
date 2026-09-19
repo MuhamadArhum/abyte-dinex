@@ -17,7 +17,6 @@ const logo = require('../assets/logo.png');
 const { height: SCREEN_H } = Dimensions.get('window');
 
 export default function LoginScreen() {
-  const [companyCode, setCompanyCode] = useState('');
   const [email, setEmail]             = useState('');
   const [password, setPassword]       = useState('');
   const [showPw, setShowPw]           = useState(false);
@@ -51,14 +50,13 @@ export default function LoginScreen() {
   }, []);
 
   const handleLogin = async () => {
-    if (!companyCode.trim() || !email.trim() || !password.trim()) {
+    if (!email.trim() || !password.trim()) {
       showToast('Please fill in all fields.', 'warning');
       return;
     }
     setLoading(true);
     try {
       const res = await api.post('/auth/login', {
-        company_code: companyCode.trim().toLowerCase(),
         email: email.trim(),
         password,
       });
@@ -130,18 +128,6 @@ export default function LoginScreen() {
 
           {/* Fields */}
           <View style={styles.fields}>
-            <InputField
-              label="Company Code"
-              icon="business-outline"
-              placeholder="e.g. abyte"
-              value={companyCode}
-              onChangeText={setCompanyCode}
-              focused={focused === 'company'}
-              onFocus={() => setFocused('company')}
-              onBlur={() => setFocused(null)}
-              autoCapitalize="none"
-              returnKeyType="next"
-            />
             <InputField
               label="Email Address"
               icon="mail-outline"

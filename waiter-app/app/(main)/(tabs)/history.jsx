@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, FlatList, StyleSheet,
   RefreshControl, ActivityIndicator, TouchableOpacity, TextInput,
@@ -6,7 +6,6 @@ import {
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api, { BASE_URL } from '../../../services/api';
-import useAuthStore from '../../../store/authStore';
 import { C, shadow } from '../../../constants/theme';
 import { ReceiptModal } from '../../../components/ReceiptView';
 
@@ -83,26 +82,26 @@ export default function HistoryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [receiptData, setReceiptData] = useState(null);
   const [receiptLoading, setReceiptLoading] = useState(false);
-  const { user } = useAuthStore();
+  const hasLoadedRef = useRef(false);
 
   const fetchHistory = useCallback(async () => {
     try {
-      const res = await api.get('/sales?limit=200&page=1');
+      const res = await api.get('/sales/my-history?limit=50&page=1');
       const data = res.data?.data || res.data || [];
-      const all = Array.isArray(data) ? data.filter((s) => s.status === 'completed') : [];
-      const myId = user?.user_id;
-      setSales(myId ? all.filter((s) => Number(s.user_id) === Number(myId)) : all);
+      setSales(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('fetchHistory error:', err.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user]);
+  }, []);
 
   useFocusEffect(useCallback(() => {
-    setLoading(true);
-    fetchHistory();
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      fetchHistory();
+    }
   }, [fetchHistory]));
 
   const filteredSales = useMemo(() => {
@@ -224,6 +223,10 @@ export default function HistoryScreen() {
         <FlatList
           data={filteredSales}
           keyExtractor={(item) => String(item.sale_id)}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={7}
+          removeClippedSubviews
           contentContainerStyle={styles.list}
           refreshControl={
             <RefreshControl refreshing={refreshing}

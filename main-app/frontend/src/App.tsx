@@ -19,8 +19,6 @@ const ResetPassword  = lazy(() => import('./pages/ResetPassword'));
 const NotFound       = lazy(() => import('./pages/NotFound'));
 const Dashboard      = lazy(() => import('./pages/Dashboard'));
 const HelpSupport    = lazy(() => import('./pages/HelpSupport'));
-const SalesAnalytics = lazy(() => import('./pages/SalesAnalytics'));
-
 // Sales
 const POS          = lazy(() => import('./pages/sales/POS'));
 const Orders       = lazy(() => import('./pages/sales/Orders'));
@@ -28,12 +26,7 @@ const CashRegister = lazy(() => import('./pages/sales/CashRegister'));
 const Returns      = lazy(() => import('./pages/sales/Returns'));
 const Quotations   = lazy(() => import('./pages/sales/Quotations'));
 const CreditSales  = lazy(() => import('./pages/sales/CreditSales'));
-const PriceRules   = lazy(() => import('./pages/sales/PriceRules'));
-const SalesTargets = lazy(() => import('./pages/sales/SalesTargets'));
-const Deliveries   = lazy(() => import('./pages/sales/Deliveries'));
 const WalkInOrders = lazy(() => import('./pages/sales/WalkInOrders'));
-const DoneOrders   = lazy(() => import('./pages/sales/DoneOrders'));
-const SalesReports = lazy(() => import('./pages/sales/SalesReports'));
 
 // Inventory
 const Inventory           = lazy(() => import('./pages/inventory/Inventory'));
@@ -174,12 +167,6 @@ function App() {
                                   <Route path="/returns"        element={<G k="sales.returns"><Returns /></G>} />
                                   <Route path="/quotations"     element={<G k="sales.quotations"><Quotations /></G>} />
                                   <Route path="/credit-sales"   element={<G k="sales.credit"><CreditSales /></G>} />
-                                  <Route path="/price-rules"    element={<G k="sales.pricerules"><PriceRules /></G>} />
-                                  <Route path="/sales-targets"  element={<G k="sales.targets"><SalesTargets /></G>} />
-                                  <Route path="/deliveries"     element={<G k="sales.deliveries"><Deliveries /></G>} />
-                                  <Route path="/done-orders"    element={<G k="sales.orders"><DoneOrders /></G>} />
-                                  <Route path="/sales-reports"  element={<G k="sales.reports"><SalesReports /></G>} />
-                                  <Route path="/sales-analytics"element={<G k="sales.reports"><SalesAnalytics /></G>} />
 
                                   {/* Restaurant */}
                                   <Route path="/restaurant/tables" element={<G k="restaurant.tables"><TableManagement /></G>} />

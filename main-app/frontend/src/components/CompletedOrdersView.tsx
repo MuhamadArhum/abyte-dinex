@@ -111,6 +111,7 @@ const CompletedOrdersView: React.FC<CompletedOrdersViewProps> = ({
   // View mode: 'shift' uses register boundaries; 'date' uses manual date range
   const [viewMode, setViewMode] = useState<'shift' | 'date'>('shift');
   const [shiftInfo, setShiftInfo]     = useState<ShiftInfo | null>(null);
+  const [availableShifts, setAvailableShifts] = useState<ShiftInfo[]>([]);
   const [shiftLoading, setShiftLoading] = useState(true);
 
   // Filters
@@ -157,39 +158,26 @@ const CompletedOrdersView: React.FC<CompletedOrdersViewProps> = ({
     const loadShift = async () => {
       setShiftLoading(true);
       try {
-        // Try open register first
-        const res = await api.get('/register/current');
-        const reg = res.data;
-        setShiftInfo({
-          register_id: reg.register_id,
-          status: 'open',
-          opened_at: reg.opened_at,
-          closed_at: null,
-          opened_by_name: reg.opened_by_name,
-          label: 'Current Shift (Open)',
-        });
-      } catch {
-        // No open register — get last closed shift
-        try {
-          const hist = await api.get('/register/history', { params: { page: 1, limit: 1 } });
-          const regs: any[] = hist.data.registers || [];
-          if (regs.length > 0) {
-            const last = regs[0];
-            setShiftInfo({
-              register_id: last.register_id,
-              status: 'closed',
-              opened_at: last.opened_at,
-              closed_at: last.closed_at,
-              opened_by_name: last.opened_by_name,
-              label: 'Last Shift (Closed)',
-            });
-          } else {
-            // No register at all — fall back to date mode showing today
-            setViewMode('date');
-          }
-        } catch {
-          setViewMode('date');
+        const [currentRes, historyRes] = await Promise.all([
+          api.get('/register/current'),
+          api.get('/register/history', { params: { page: 1, limit: 50 } }),
+        ]);
+        const shifts: ShiftInfo[] = [];
+        const current = currentRes.data;
+        if (current?.register_id) {
+          shifts.push({ register_id: current.register_id, status: 'open', opened_at: current.opened_at, closed_at: null, opened_by_name: current.opened_by_name, label: 'Current Shift (Open)' });
         }
+        const registers: any[] = historyRes.data?.registers || [];
+        registers.forEach((reg) => {
+          if (!shifts.some((shift) => shift.register_id === reg.register_id)) {
+            shifts.push({ register_id: reg.register_id, status: reg.status === 'open' ? 'open' : 'closed', opened_at: reg.opened_at, closed_at: reg.closed_at || null, opened_by_name: reg.opened_by_name, label: reg.status === 'open' ? 'Current Shift (Open)' : `Shift #${reg.register_id}` });
+          }
+        });
+        setAvailableShifts(shifts);
+        if (shifts.length > 0) setShiftInfo(shifts[0]);
+        else setViewMode('date');
+      } catch {
+        setViewMode('date');
       } finally {
         setShiftLoading(false);
       }
@@ -385,7 +373,25 @@ const CompletedOrdersView: React.FC<CompletedOrdersViewProps> = ({
           {viewMode === 'shift' ? (
             shiftLoading
               ? <div className="flex items-center gap-2 text-xs text-gray-400 py-1"><div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-emerald-500"></div> Loading shift info...</div>
-              : shiftBanner
+              : <div className="flex flex-wrap items-center gap-2">
+                  {shiftBanner}
+                  {availableShifts.length > 1 && (
+                    <select
+                      value={shiftInfo?.register_id || ''}
+                      onChange={e => {
+                        const selected = availableShifts.find(shift => shift.register_id === Number(e.target.value));
+                        if (selected) { setPage(1); setShiftInfo(selected); }
+                      }}
+                      className="px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-white text-gray-700"
+                    >
+                      {availableShifts.map(shift => (
+                        <option key={shift.register_id} value={shift.register_id}>
+                          {shift.label} - {fmtDt(shift.opened_at)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
           ) : (
             <DateRangeFilter
               standalone={false}

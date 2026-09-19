@@ -24,6 +24,9 @@ const PAYMENT_METHODS = [
 
 const { height: SCREEN_H } = Dimensions.get('window');
 const haptic = () => Vibration.vibrate(8);
+const PAGE_SIZE = 40;
+const menuCache = { categories: null, products: null, productPage: 0, hasMore: true, fetchedAt: 0 };
+const MENU_CACHE_TTL = 5 * 60 * 1000;
 
 const ORDER_TYPE_LABEL = {
   dine_in: 'Dine In',
@@ -39,13 +42,17 @@ export default function OrderScreen() {
   const tableName = name ? decodeURIComponent(name) : 'Order';
   const isEditMode = !!saleId;
 
-  const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState(() => menuCache.categories || []);
+  const [products, setProducts] = useState(() => menuCache.products || []);
+  const [productPage, setProductPage] = useState(() => menuCache.productPage || 0);
+  const [hasMoreProducts, setHasMoreProducts] = useState(() => menuCache.hasMore);
+  const [loadingMoreProducts, setLoadingMoreProducts] = useState(false);
   const [selectedCat, setSelectedCat] = useState(null);
   const [orderType, setOrderType] = useState(orderTypeParam || 'dine_in');
   const [settings, setSettings] = useState(null);
+  const [settingsReady, setSettingsReady] = useState(false);
   const [saleInfo, setSaleInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !menuCache.products);
   const [sending, setSending] = useState(false);
   const [cartVisible, setCartVisible] = useState(false);
   const [payModalVisible, setPayModalVisible] = useState(false);
@@ -74,9 +81,10 @@ export default function OrderScreen() {
   const taxPercent = React.useMemo(() => {
     if (!settings) return 0;
     const s = settings;
-    if (s.pos_mode === 'category' && s.pos_tax_config) {
+    if (s.pos_tax_config) {
       const cat = s.pos_tax_config[getCatKey(orderType)] || {};
       if (!cat.tax_enabled) return 0;
+      return parseFloat(cat.tax_rate) || 0;
     }
     if (selectedPayMethod === 'card')   return parseFloat(s.tax_on_card   || s.tax_rate || 0);
     if (selectedPayMethod === 'online') return parseFloat(s.tax_on_online || s.tax_rate || 0);
@@ -102,35 +110,63 @@ export default function OrderScreen() {
     return list;
   }, [products, selectedCat, searchQuery]);
 
+  const loadMoreProducts = useCallback(async () => {
+    if (loading || loadingMoreProducts || !hasMoreProducts) return;
+    setLoadingMoreProducts(true);
+    try {
+      const nextPage = productPage + 1;
+      const res = await api.get(`/products?type=finished_good&page=${nextPage}&limit=${PAGE_SIZE}`);
+      const nextProducts = Array.isArray(res.data?.data) ? res.data.data : [];
+      const pagination = res.data?.pagination;
+      const hasMore = pagination ? nextPage < pagination.totalPages : nextProducts.length === PAGE_SIZE;
+      setProducts((current) => [...current, ...nextProducts]);
+      setProductPage(nextPage);
+      setHasMoreProducts(hasMore);
+      menuCache.products = [...(menuCache.products || []), ...nextProducts];
+      menuCache.productPage = nextPage;
+      menuCache.hasMore = hasMore;
+    } catch (err) {
+      console.error('loadMoreProducts error:', err.message);
+    } finally {
+      setLoadingMoreProducts(false);
+    }
+  }, [hasMoreProducts, loading, loadingMoreProducts, productPage]);
+
   const loadData = useCallback(async () => {
     try {
-      const requests = [
-        api.get('/products/categories?type=finished_good'),
-        api.get('/products?type=finished_good'),
-        api.get('/settings'),
-      ];
-      if (saleId) requests.push(api.get(`/sales/${saleId}`));
+      const hasFreshMenu = menuCache.products && Date.now() - menuCache.fetchedAt < MENU_CACHE_TTL;
+      const catPromise = hasFreshMenu ? Promise.resolve(null) : api.get('/products/categories?type=finished_good');
+      const prodPromise = hasFreshMenu ? Promise.resolve(null) : api.get(`/products?type=finished_good&page=1&limit=${PAGE_SIZE}`);
+      const settingsPromise = api.get('/settings');
+      const salePromise = saleId ? api.get(`/sales/${saleId}`) : Promise.resolve(null);
 
-      const results = await Promise.allSettled(requests);
-
-      const catRes  = results[0].status === 'fulfilled' ? results[0].value : null;
-      const prodRes = results[1].status === 'fulfilled' ? results[1].value : null;
-      const setRes  = results[2].status === 'fulfilled' ? results[2].value : null;
-      const saleRes = results[3]?.status === 'fulfilled' ? results[3].value : null;
-
-      // If products failed to load, show an error — menu can't work without them
-      if (results[1].status === 'rejected') {
-        showToast('Failed to load menu items. Check your connection and go back to retry.', 'error');
+      const [catResult, prodResult] = await Promise.allSettled([catPromise, prodPromise]);
+      if (!hasFreshMenu) {
+        if (prodResult.status === 'rejected') {
+          showToast('Failed to load menu items. Check your connection and go back to retry.', 'error');
+        }
+        const catRes = catResult.status === 'fulfilled' ? catResult.value : null;
+        const prodRes = prodResult.status === 'fulfilled' ? prodResult.value : null;
+        const cats = Array.isArray(catRes?.data?.data) ? catRes.data.data : Array.isArray(catRes?.data) ? catRes.data : [];
+        const prods = Array.isArray(prodRes?.data?.data) ? prodRes.data.data : Array.isArray(prodRes?.data) ? prodRes.data : [];
+        const pagination = prodRes?.data?.pagination;
+        const hasMore = pagination ? 1 < pagination.totalPages : prods.length === PAGE_SIZE;
+        menuCache.categories = cats;
+        menuCache.products = prods;
+        menuCache.productPage = 1;
+        menuCache.hasMore = hasMore;
+        menuCache.fetchedAt = Date.now();
+        setCategories(cats);
+        setProducts(prods);
+        setProductPage(1);
+        setHasMoreProducts(hasMore);
+        setSelectedCat(null);
       }
+      setLoading(false);
 
-      const cats  = Array.isArray(catRes?.data?.data)  ? catRes.data.data
-                  : Array.isArray(catRes?.data)         ? catRes.data : [];
-      const prods = Array.isArray(prodRes?.data?.data) ? prodRes.data.data
-                  : Array.isArray(prodRes?.data)        ? prodRes.data : [];
-
-      setCategories(cats);
-      setProducts(prods);
-      setSelectedCat(null);
+      const [settingsResult, saleResult] = await Promise.allSettled([settingsPromise, salePromise]);
+      const setRes = settingsResult.status === 'fulfilled' ? settingsResult.value : null;
+      const saleRes = saleResult.status === 'fulfilled' ? saleResult.value : null;
 
       if (setRes?.data) {
         const s = setRes.data;
@@ -139,6 +175,7 @@ export default function OrderScreen() {
         }
         setSettings(s);
       }
+      setSettingsReady(settingsResult.status === 'fulfilled');
 
       if (saleRes?.data) {
         const saleData = saleRes.data;
@@ -147,7 +184,7 @@ export default function OrderScreen() {
 
         const details = saleData?.items || saleData?.details || [];
         const cartItems = details.map((d) => {
-          const matched = prods.find((p) => p.product_id === d.product_id);
+          const matched = products.find((p) => p.product_id === d.product_id);
           return {
             product_id: d.product_id,
             product_name: d.product_name || matched?.product_name || 'Item',
@@ -162,8 +199,6 @@ export default function OrderScreen() {
     } catch (err) {
       console.error('loadData error:', err.message);
       showToast('Failed to load menu. Please go back and try again.', 'error');
-    } finally {
-      setLoading(false);
     }
   }, [saleId]);
 
@@ -198,6 +233,10 @@ export default function OrderScreen() {
   };
 
   const submitOrder = async () => {
+    if (!settingsReady) {
+      showToast('Still loading tax and service-charge settings. Please wait a moment.', 'warning');
+      return;
+    }
     setSending(true);
     try {
       if (isEditMode) {
@@ -506,6 +545,13 @@ export default function OrderScreen() {
         data={displayProducts}
         keyExtractor={(item) => String(item.product_id)}
         numColumns={2}
+        onEndReached={loadMoreProducts}
+        onEndReachedThreshold={0.5}
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={7}
+        removeClippedSubviews
+        ListFooterComponent={loadingMoreProducts ? <ActivityIndicator color={C.primary} style={{ paddingVertical: 16 }} /> : null}
         contentContainerStyle={[
           styles.productGrid,
           { paddingBottom: totalItems > 0 ? 100 : 24 },
@@ -584,7 +630,7 @@ export default function OrderScreen() {
           <TouchableOpacity
             style={[styles.sendBtn, { flex: 0, paddingHorizontal: 20 }]}
             onPress={() => { haptic(); handleSendOrder(); }}
-            disabled={sending}
+            disabled={sending || !settingsReady}
             activeOpacity={0.85}
           >
             {sending ? (
@@ -869,7 +915,7 @@ export default function OrderScreen() {
                   <TouchableOpacity
                     style={styles.sendBtn}
                     onPress={() => { setCartVisible(false); handleSendOrder(); }}
-                    disabled={sending}
+                    disabled={sending || !settingsReady}
                   >
                     {sending ? (
                       <ActivityIndicator color="#FFF" size="small" />

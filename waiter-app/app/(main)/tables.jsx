@@ -63,12 +63,15 @@ const skS = StyleSheet.create({
   listRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.card, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: C.border },
 });
 
+const tableCache = { data: null, fetchedAt: 0 };
+const TABLE_CACHE_TTL = 15 * 1000;
+
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function TablesScreen() {
   const { orderType } = useLocalSearchParams();
   const insets        = useSafeAreaInsets();
-  const [tables, setTables]         = useState([]);
-  const [loading, setLoading]       = useState(true);
+  const [tables, setTables]         = useState(() => tableCache.data || []);
+  const [loading, setLoading]       = useState(() => !tableCache.data);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode]     = useState('card'); // 'card' | 'list'
@@ -78,7 +81,10 @@ export default function TablesScreen() {
     try {
       const res = await api.get('/restaurant/tables');
       const all = res.data || [];
-      setTables(all.filter(t => t.status === 'available' && Number(t.has_pending_order) === 0));
+      const available = all.filter(t => t.status === 'available' && Number(t.has_pending_order) === 0);
+      tableCache.data = available;
+      tableCache.fetchedAt = Date.now();
+      setTables(available);
     } catch (err) {
       console.error('fetchTables error:', err.message);
     } finally {
@@ -88,8 +94,10 @@ export default function TablesScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => {
-    setLoading(true);
-    fetchTables();
+    if (!tableCache.data || Date.now() - tableCache.fetchedAt > TABLE_CACHE_TTL) {
+      setLoading(!tableCache.data);
+      fetchTables();
+    }
   }, [fetchTables]));
 
   const handleTablePress = (table) => {

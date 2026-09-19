@@ -11,7 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import useServerStore from '../store/serverStore';
 import { C } from '../constants/theme';
 
-const PLACEHOLDER = 'http://192.168.1.1:5000/api';
+const PLACEHOLDER = 'http://192.168.1.105:3008/api';
 
 export default function SetupScreen() {
   const { saveServerUrl } = useServerStore();
@@ -49,11 +49,14 @@ export default function SetupScreen() {
   };
 
   const handleManualSave = async () => {
-    const url = manualUrl.trim();
-    if (!url.startsWith('http')) {
-      Alert.alert('Invalid URL', 'URL must start with http:// or https://');
+    let url = manualUrl.trim();
+    if (!url) {
+      Alert.alert('Server address required', 'Enter the server URL shown in the POS settings.');
       return;
     }
+    if (!/^https?:\/\//i.test(url)) url = `http://${url}`;
+    url = url.replace(/\/+$/, '');
+    if (!/\/api$/i.test(url)) url += '/api';
     setSaving(true);
     try {
       await saveServerUrl(url);
@@ -151,10 +154,10 @@ export default function SetupScreen() {
             </View>
             <Text style={styles.manualTitle}>Enter Server Address</Text>
             <Text style={styles.manualSub}>
-              Type the server URL exactly as shown on the POS under Settings → Waiter App.
+              Enter the server IP or URL shown on the POS under Settings → Waiter App.
             </Text>
 
-            <Text style={styles.fieldLabel}>Server URL</Text>
+            <Text style={styles.fieldLabel}>Server IP or URL</Text>
             <TextInput
               style={styles.textInput}
               value={manualUrl}
@@ -168,7 +171,7 @@ export default function SetupScreen() {
               onSubmitEditing={handleManualSave}
             />
             <Text style={styles.inputHint}>
-              Example: http://192.168.1.105:5000/api
+              Example: 192.168.1.105:3008/api
             </Text>
 
             <TouchableOpacity

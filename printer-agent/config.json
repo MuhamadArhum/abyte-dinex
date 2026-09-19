@@ -1,3 +1,37 @@
 {
-  "printers": []
+  "printers": [
+    {
+      "id": "ca5a6f94-ecbe-4c46-837a-9ab0720d4323",
+      "name": "COUNTER",
+      "type": "invoice",
+      "connection": "network",
+      "ip": "192.168.111.206",
+      "port": 9100,
+      "com": null,
+      "printer_name": null,
+      "paper_width": 80,
+      "categories": [],
+      "is_master": false,
+      "cut_paper": true,
+      "open_drawer": false
+    },
+    {
+      "id": "25702299-6518-46fd-99d5-4728765d60be",
+      "name": "XPR",
+      "type": "kot",
+      "connection": "network",
+      "ip": "192.168.111.202",
+      "port": 9100,
+      "com": null,
+      "printer_name": null,
+      "paper_width": 80,
+      "categories": [],
+      "is_master": true,
+      "cut_paper": true,
+      "open_drawer": false
+    }
+  ],
+  "server_url": "http://localhost:5181/",
+  "tenant_code": "",
+  "agent_token": "e4169479f65b53b303f18138627f514a04ff6bbf256114ac101c8c4eef6494f9"
 }

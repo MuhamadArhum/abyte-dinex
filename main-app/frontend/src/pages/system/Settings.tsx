@@ -108,11 +108,6 @@ const Settings = () => {
   const [showViewCompletedPw, setShowViewCompletedPw] = useState(false);
   const [showRefundPw, setShowRefundPw] = useState(false);
   const [showReportsPw, setShowReportsPw] = useState(false);
-  const [showJvDeletePw, setShowJvDeletePw] = useState(false);
-
-  // Accounting accounts (for CPV/CRV defaults)
-  const [accountsList, setAccountsList] = useState<any[]>([]);
-
   // Password
   const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [showPasswords, setShowPasswords] = useState({ current: false, new_password: false, confirm: false });
@@ -217,9 +212,6 @@ const Settings = () => {
 
   useEffect(() => {
     fetchSettings();
-    api.get('/accounting/accounts', { params: { tree: 1 } })
-      .then(r => setAccountsList((r.data.data || []).filter((a: any) => a.is_active && a.level === 4)))
-      .catch(() => {});
   }, [currentUser]);
 
   useEffect(() => {
@@ -1167,25 +1159,6 @@ const Settings = () => {
                 </div>
               </div>
 
-              {/* ── Auto Print Receipt toggle (still useful) ── */}
-              <div>
-                <h2 className="text-sm font-semibold text-gray-700 mb-3">Receipt Settings</h2>
-                <label className="flex items-start gap-3 p-4 rounded-xl border border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition">
-                  <input
-                    type="checkbox"
-                    checked={!!settings.auto_print_receipt}
-                    onChange={e => setSettings({ ...settings, auto_print_receipt: e.target.checked })}
-                    className="mt-0.5 w-4 h-4 accent-emerald-600"
-                  />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                      <Printer size={14} className="text-gray-500" /> Auto-Print Receipt After Sale
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">Automatically send receipt to the printer when a sale is completed</p>
-                  </div>
-                </label>
-              </div>
-
             </div>
           )}
 
@@ -1343,99 +1316,6 @@ const Settings = () => {
                       className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 disabled:opacity-50 font-semibold shadow-lg transition-all">
                       {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
                       Save POS Security Settings
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {/* Accounts Security (Admin only) */}
-              {currentUser?.role_name === 'Admin' && (
-                <div className="border-t border-gray-200 pt-8">
-                  <h2 className="text-base font-semibold text-gray-800 mb-2 flex items-center gap-2">
-                    <FileText size={18} className="text-emerald-600" />
-                    Accounts Security
-                  </h2>
-                  <p className="text-sm text-gray-600 mb-6">
-                    Set passwords to protect sensitive accounting actions. Leave empty to disable protection.
-                  </p>
-
-                  <form onSubmit={handleSaveSettings} className="max-w-lg space-y-5">
-                    {/* JV Delete Password */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Journal Voucher Delete Password
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showJvDeletePw ? 'text' : 'password'}
-                          value={settings.jv_delete_password || ''}
-                          onChange={e => setSettings({ ...settings, jv_delete_password: e.target.value })}
-                          className="w-full pl-4 pr-10 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                          placeholder="Leave empty to disable"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowJvDeletePw(s => !s)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                          {showJvDeletePw ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Require password before deleting any Journal Voucher (draft or posted)</p>
-                    </div>
-
-                    {/* CPV / CRV Default Accounts */}
-                    <div className="border-t border-gray-100 pt-5">
-                      <h3 className="text-sm font-bold text-gray-700 mb-1">Voucher Default Accounts</h3>
-                      <p className="text-xs text-gray-500 mb-4">Select the default Cash/Bank account that pre-fills when creating CPV or CRV. Staff won't need to select it every time.</p>
-
-                      <div className="space-y-4">
-                        {/* CPV Default Account */}
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                            CPV Default Account <span className="text-xs font-normal text-gray-400">(Cash Payment Voucher)</span>
-                          </label>
-                          <select
-                            value={settings.cpv_default_account_id || ''}
-                            onChange={e => setSettings({ ...settings, cpv_default_account_id: e.target.value })}
-                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white"
-                          >
-                            <option value="">— None (manual select) —</option>
-                            {accountsList.map(a => (
-                              <option key={a.account_id} value={a.account_id}>
-                                {a.account_code} — {a.account_name}
-                              </option>
-                            ))}
-                          </select>
-                          <p className="text-xs text-gray-400 mt-1">Usually your main Cash or Bank account (Asset type)</p>
-                        </div>
-
-                        {/* CRV Default Account */}
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                            CRV Default Account <span className="text-xs font-normal text-gray-400">(Cash Receipt Voucher)</span>
-                          </label>
-                          <select
-                            value={settings.crv_default_account_id || ''}
-                            onChange={e => setSettings({ ...settings, crv_default_account_id: e.target.value })}
-                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white"
-                          >
-                            <option value="">— None (manual select) —</option>
-                            {accountsList.map(a => (
-                              <option key={a.account_id} value={a.account_id}>
-                                {a.account_code} — {a.account_name}
-                              </option>
-                            ))}
-                          </select>
-                          <p className="text-xs text-gray-400 mt-1">Usually your main Cash or Bank account (Asset type)</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button type="submit" disabled={saving}
-                      className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 font-semibold shadow-lg transition-all">
-                      {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                      Save Accounts Settings
                     </button>
                   </form>
                 </div>

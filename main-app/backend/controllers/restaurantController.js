@@ -25,8 +25,14 @@ exports.getTables = async (req, res) => {
   try {
     const tables = await query(
       `SELECT t.*,
-        (SELECT COUNT(*) FROM sales s WHERE s.table_id = t.table_id AND s.status = 'pending') AS has_pending_order
+        COALESCE(p.pending_count, 0) AS has_pending_order
        FROM restaurant_tables t
+       LEFT JOIN (
+         SELECT table_id, COUNT(*) AS pending_count
+         FROM sales
+         WHERE status = 'pending' AND table_id IS NOT NULL
+         GROUP BY table_id
+       ) p ON p.table_id = t.table_id
        ORDER BY t.floor, t.table_name`
     );
     res.json(tables);

@@ -19,6 +19,11 @@ router.post('/:id/refund', requirePermission('sales.returns'), salesController.r
 router.post('/:id/sync-tax', requirePermission('sales.pos'), salesController.syncTax);
 router.delete('/:id', authorize('Admin'), salesController.deleteSale);
 router.get('/today', requirePermission('sales.pos'), salesController.getToday);
+router.get('/my-history', requirePermission('sales.pos'), (req, res) => {
+	req.query.waiter = '1';
+	req.query.status = 'completed';
+	salesController.getAll(req, res);
+});
 router.get('/', requirePermission('sales.orders'), salesController.getAll);
 router.get('/:id', requirePermission('sales.pos'), salesController.getById);
 

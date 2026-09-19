@@ -1,0 +1,78 @@
+{
+  "name": "abyte-dinex-desktop",
+  "version": "1.0.0",
+  "description": "Abyte Dinex POS desktop application",
+  "main": "main.cjs",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.abyte.dinex",
+    "productName": "Abyte Dinex",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "../main-app/frontend/dist/**/*",
+      "../main-app/backend/**/*",
+      "!../main-app/backend/logs/**/*",
+      "!../main-app/backend/backups/**/*",
+      "!../main-app/backend/uploads/**/*",
+      "!../main-app/backend/tests/**/*",
+      "!../main-app/backend/node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../main-app/backend",
+        "to": "backend",
+        "filter": [
+          "**/*",
+          "!node_modules/**/*",
+          "!logs/**/*",
+          "!backups/**/*",
+          "!uploads/**/*",
+          "!tests/**/*"
+        ]
+      },
+      {
+        "from": "../main-app/backend/node_modules",
+        "to": "backend/node_modules"
+      },
+      {
+        "from": "../main-app/frontend/dist",
+        "to": "frontend/dist"
+      },
+      {
+        "from": "../abyte-dinex.ico",
+        "to": "abyte-dinex.ico"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "../abyte-dinex.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Abyte Dinex"
+    }
+  }
+}

@@ -46,10 +46,13 @@ function RoleModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
 
   const handleCreate = async () => {
     setError('');
-    if (!name.trim()) return setError('Role name is required.');
+    const roleName = name.trim().replace(/\s+/g, ' ');
+    if (!roleName) return setError('Role name is required.');
+    if (roleName.length < 3) return setError('Role name must be at least 3 characters.');
+    if (roleName.length > 40) return setError('Role name cannot exceed 40 characters.');
     setSaving(true);
     try {
-      await api.post('/users/roles', { role_name: name.trim() });
+      await api.post('/users/roles', { role_name: roleName });
       onSaved();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create role.');
@@ -57,41 +60,78 @@ function RoleModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+    <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onMouseDown={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+        <div className="px-6 py-5 bg-gradient-to-br from-emerald-50 via-white to-teal-50 border-b border-emerald-100">
+          <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center">
-              <Shield size={18} className="text-emerald-600" />
+            <div className="w-11 h-11 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-200">
+              <Shield size={18} className="text-white" />
             </div>
-            <h2 className="text-base font-semibold text-gray-800">New Role</h2>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Create New Role</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Add a role for your team and manage its access later.</p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <X size={16} className="text-gray-500" />
+          <button onClick={onClose} className="p-2 hover:bg-white/80 rounded-lg transition-colors">
+            <X size={17} className="text-gray-500" />
           </button>
+          </div>
         </div>
-        <div className="px-6 py-5 space-y-3">
+        <div className="px-6 py-6 space-y-5">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2.5 rounded-xl">
+            <div role="alert" className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">
               {error}
             </div>
           )}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Role Name *</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-semibold text-gray-700">Role name <span className="text-red-500">*</span></label>
+              <span className="text-xs text-gray-400">{name.length}/40</span>
+            </div>
             <input
-              value={name} onChange={e => setName(e.target.value)}
-              placeholder="e.g. Supervisor"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors"
+              autoFocus
+              value={name}
+              maxLength={40}
+              onChange={e => { setName(e.target.value); setError(''); }}
+              onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }}
+              placeholder="e.g. Supervisor, Waiter, Storekeeper"
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-colors"
             />
+            <p className="text-xs text-gray-400 mt-1.5">Use a clear name that matches the staff member's responsibilities.</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Quick suggestions</p>
+            <div className="flex flex-wrap gap-2">
+              {['Supervisor', 'Waiter', 'Storekeeper', 'Accountant'].map(suggestion => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => { setName(suggestion); setError(''); }}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${name.trim().toLowerCase() === suggestion.toLowerCase() ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 text-gray-600 hover:border-emerald-300 hover:bg-emerald-50/50'}`}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 border border-gray-200">
+            <div className="w-9 h-9 rounded-xl bg-white border border-gray-200 flex items-center justify-center shrink-0">
+              <Shield size={16} className="text-emerald-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-700 truncate">{name.trim() || 'New role'}</p>
+              <p className="text-xs text-gray-500">The role will be available when creating or editing users.</p>
+            </div>
           </div>
         </div>
-        <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
+        <div className="flex flex-col-reverse sm:flex-row gap-3 px-6 py-4 bg-gray-50 border-t border-gray-100">
           <button onClick={onClose}
-            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium">
+            className="flex-1 px-4 py-2.5 border border-gray-200 bg-white rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium">
             Cancel
           </button>
           <button onClick={handleCreate} disabled={saving}
-            className="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-sm font-semibold transition-colors">
+            className="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm">
             {saving ? 'Creating…' : 'Create Role'}
           </button>
         </div>
@@ -375,25 +415,57 @@ export default function UsersPage() {
         </div>
 
         {/* ── Manage Roles ── */}
-        <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 mr-1">
-            <Shield size={12} /> Roles
-          </span>
-          {roles.map(r => (
-            <span key={r.role_id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-sm text-gray-700">
-              {r.role_name}
-              {!BUILT_IN_ROLES.includes(r.role_name) && (
-                <button onClick={() => handleDeleteRole(r.role_id, r.role_name)}
-                  className="text-red-400 hover:text-red-600 transition ml-0.5" title="Delete role">
-                  <X size={12} />
-                </button>
-              )}
-            </span>
-          ))}
-          <button onClick={() => setShowRoleModal(true)}
-            className="flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-semibold hover:bg-emerald-100 transition">
-            <Plus size={13} /> New Role
-          </button>
+        <div className="mt-5 pt-5 border-t border-gray-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <Shield size={15} className="text-emerald-600" />
+                </div>
+                <h2 className="text-sm font-bold text-gray-800">Created Roles</h2>
+                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[11px] font-bold">{roles.length}</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1 ml-10">Built-in roles and custom roles available for user accounts.</p>
+            </div>
+            <button onClick={() => setShowRoleModal(true)}
+              className="inline-flex items-center justify-center gap-2 px-3.5 py-2 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 transition shadow-sm">
+              <Plus size={14} /> New Role
+            </button>
+          </div>
+
+          {roles.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-center">
+              <Shield size={20} className="mx-auto text-gray-300 mb-1" />
+              <p className="text-xs font-medium text-gray-500">No roles found</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {roles.map(r => {
+                const isBuiltIn = BUILT_IN_ROLES.includes(r.role_name);
+                const roleColor = ROLE_COLORS[r.role_name] || 'bg-gray-100 text-gray-700 border-gray-200';
+                return (
+                  <div key={r.role_id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:border-emerald-200 hover:shadow-sm transition-all">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${ROLE_BG[r.role_name] || 'bg-gray-400'}`}>
+                      <Shield size={15} className="text-white" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{r.role_name}</p>
+                      <span className={`inline-flex items-center mt-1 px-1.5 py-0.5 rounded border text-[10px] font-semibold ${roleColor}`}>
+                        {isBuiltIn ? 'Built-in role' : 'Custom role'}
+                      </span>
+                    </div>
+                    {!isBuiltIn && (
+                      <button onClick={() => handleDeleteRole(r.role_id, r.role_name)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                        title={`Delete ${r.role_name}`} aria-label={`Delete ${r.role_name}`}>
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

@@ -1095,9 +1095,9 @@ const POS = () => {
   }
 
   return (
-    <div className="flex h-full bg-gray-50 overflow-hidden">
+    <div className="flex h-full min-h-0 min-w-0 bg-gray-50 overflow-hidden">
       {/* Left Side: Product Grid */}
-      <div className="flex-1 flex flex-col h-full min-w-0">
+      <div className="flex-1 flex flex-col h-full min-h-0 min-w-0">
         {/* Header / Search */}
         <div className="p-3 md:p-4 bg-white border-b border-gray-100 shadow-sm z-10 space-y-2 md:space-y-3">
           <div className="flex flex-wrap items-center gap-2">

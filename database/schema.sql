@@ -569,6 +569,7 @@ CREATE TABLE IF NOT EXISTS sales (
     sale_id INT PRIMARY KEY AUTO_INCREMENT,
     sub_total DECIMAL(10,2) DEFAULT 0,
     sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME NULL,
     total_amount DECIMAL(10, 2) NOT NULL,
     discount DECIMAL(10, 2) DEFAULT 0.00,
     bundle_discount DECIMAL(10, 2) DEFAULT 0.00,
@@ -593,6 +594,7 @@ CREATE TABLE IF NOT EXISTS sales (
     FOREIGN KEY (user_id) REFERENCES users(user_id),
     FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
     INDEX idx_sale_date (sale_date),
+    INDEX idx_sale_completed_at (completed_at),
     INDEX idx_sale_status (status),
     INDEX idx_sale_payment_method (payment_method),
     INDEX idx_sale_date_status (sale_date, status)

@@ -305,6 +305,10 @@ exports.createSale = async (req, res) => {
 
     const sale_id = Number(saleResult.insertId);
 
+    if (status === 'completed') {
+      await conn.query('UPDATE sales SET completed_at = NOW() WHERE sale_id = ?', [sale_id]);
+    }
+
     // Step 5: Bulk-insert all cart items in a single query; deduct stock in 4 batch queries
     const sdPh = items.map(() => '(?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
     const sdVals = items.flatMap(item => [
@@ -443,7 +447,7 @@ exports.getPending = async (req, res) => {
       const pg = parsePagination(page, limit);
       const total = summary.order_count;
 
-      sql += ' ORDER BY s.sale_date DESC LIMIT ? OFFSET ?';
+      sql += ' ORDER BY COALESCE(s.completed_at, s.sale_date) DESC LIMIT ? OFFSET ?';
       params.push(pg.limit, pg.offset);
 
       const rows = await query(sql, params);
@@ -454,7 +458,7 @@ exports.getPending = async (req, res) => {
       });
     }
 
-    sql += ' ORDER BY s.sale_date DESC';
+    sql += ' ORDER BY COALESCE(s.completed_at, s.sale_date) DESC';
     const sales = await query(sql, params);
     res.json({ data: sales, summary });
   } catch (error) {
@@ -534,6 +538,7 @@ exports.completeSale = async (req, res) => {
     await conn.query(
       `UPDATE sales SET
         status = "completed",
+        completed_at = NOW(),
         payment_method = ?,
         amount_paid = ?,
         discount = ?,
@@ -850,9 +855,10 @@ exports.getAll = async (req, res) => {
 
     // shift_start/shift_end = exact datetime filter (for shift-wise view)
     // takes priority over date_from/date_to when provided
-    if (shift_start) { sql += ' AND s.sale_date >= ?'; params.push(shift_start); }
+    const saleTimeColumn = 'COALESCE(s.completed_at, s.sale_date)';
+    if (shift_start) { sql += ` AND ${saleTimeColumn} >= ?`; params.push(shift_start); }
     else if (date_from) { sql += ' AND s.sale_date >= ?'; params.push(date_from); }
-    if (shift_end)   { sql += ' AND s.sale_date <= ?'; params.push(shift_end); }
+    if (shift_end)   { sql += ` AND ${saleTimeColumn} <= ?`; params.push(shift_end); }
     else if (date_to) { sql += ' AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY)'; params.push(date_to); }
 
     if (search) {
@@ -889,9 +895,9 @@ exports.getAll = async (req, res) => {
         }
       }
 
-      if (shift_start) { countSql += ' AND s.sale_date >= ?'; countParams.push(shift_start); }
+      if (shift_start) { countSql += ` AND ${saleTimeColumn} >= ?`; countParams.push(shift_start); }
       else if (date_from) { countSql += ' AND s.sale_date >= ?'; countParams.push(date_from); }
-      if (shift_end)   { countSql += ' AND s.sale_date <= ?'; countParams.push(shift_end); }
+      if (shift_end)   { countSql += ` AND ${saleTimeColumn} <= ?`; countParams.push(shift_end); }
       else if (date_to) { countSql += ' AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY)'; countParams.push(date_to); }
 
       if (search) {

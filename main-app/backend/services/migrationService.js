@@ -725,6 +725,14 @@ const MIGRATIONS = [
       await queryDb(db, `DELETE FROM role_permissions WHERE role_name = 'Waiter' AND module_key = 'customers'`);
     },
   },
+  {
+    version: 31,
+    name: 'track_sale_completion_time',
+    async run(db) {
+      await queryDb(db, `ALTER TABLE sales ADD COLUMN IF NOT EXISTS completed_at DATETIME NULL`);
+      await queryDb(db, `ALTER TABLE sales ADD INDEX IF NOT EXISTS idx_sale_completed_at (completed_at)`);
+    },
+  },
 ];
 
 async function ensureMigrationsTable(db) {

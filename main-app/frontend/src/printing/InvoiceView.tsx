@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Printer, Loader2 } from 'lucide-react';
 import { printInvoice, rasterizeLogoForEscPos } from './agentPrinter';
-import { printReceiptAsBrowser } from './receiptPrinter';
 import type { ReceiptData } from './ReceiptView';
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -238,35 +237,16 @@ export function InvoiceModal({ data, onClose }: InvoiceModalProps) {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const printFromDOM = () => {
-    if (!invoiceRef.current) { printReceiptAsBrowser(data); return; }
-    const content = invoiceRef.current.outerHTML;
-    const styleLinks   = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(el => el.outerHTML).join('\n');
-    const inlineStyles = Array.from(document.querySelectorAll('style')).map(el => `<style>${(el as HTMLStyleElement).textContent}</style>`).join('\n');
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">${styleLinks}${inlineStyles}<style>@page{size:80mm auto;margin:4mm;}body{margin:0;padding:4px;background:white;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}</style></head><body>${content}<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},150);});</script></body></html>`;
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
-    document.body.appendChild(iframe);
-    iframe.contentDocument!.open();
-    iframe.contentDocument!.write(html);
-    iframe.contentDocument!.close();
-    setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 15000);
-  };
-
   const handlePrint = async () => {
     setPrinting(true);
     setMsg('');
     try {
-      // Print the actual rendered InvoiceView DOM — view and print are identical
-      printFromDOM();
-
-      // Also send to thermal printer queue (if agent is running on cashier PC)
       const paperWidth = data.paperWidth ?? 80;
       const logoEscPosData = data.logoUrl
         ? await rasterizeLogoForEscPos(data.logoUrl, paperWidth).catch(() => null) ?? undefined
         : undefined;
 
-      printInvoice({
+      const result = await printInvoice({
         storeName:      data.storeName,
         storeAddress:   data.storeAddress,
         storePhone:     data.storePhone,
@@ -295,9 +275,13 @@ export function InvoiceModal({ data, onClose }: InvoiceModalProps) {
         changeDue:      data.changeDue,
         paymentMethod:  data.paymentMethod,
         footer:         data.footer,
-      }).catch(() => {/* thermal silently fails if agent not running */});
+      });
 
-      setMsg('✓ Printing...');
+      if (!result.success) {
+        throw new Error(result.error || 'Printer agent is unavailable');
+      }
+
+      setMsg('✓ Sent to printer agent');
     } catch (e: any) {
       setMsg(`✗ ${e.message}`);
     } finally {
